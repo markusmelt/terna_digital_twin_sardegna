@@ -125,7 +125,6 @@ with tab1:
         ))
         
         # Linea 2: Elettrodotto HVDC SA.PE.I. (Selargius -> Lazio)
-        # CORRETTO: rimosso dash='dash' che causava il crash
         fig_map.add_trace(go.Scattermapbox(
             lat=[39.2600, 41.4800], lon=[9.1600, 12.8800],
             mode='lines',
@@ -171,67 +170,4 @@ with tab2:
     st.subheader("📊 Analisi Comparativa degli Scenari Operativi")
     
     # Creazione della Dashboard a due livelli con distanze corrette
-    fig_dash = make_subplots(
-        rows=2, cols=1, 
-        shared_xaxes=True, 
-        vertical_spacing=0.15,
-        subplot_titles=(
-            "<b>1. Transito di Potenza Complessivo sulla Dorsale 380 kV (MW)</b>", 
-            "<b>2. Dinamica della Temperatura del Conduttore (°C)</b>"
-        )
-    )
-
-    # --- GRAFICO 1: FLUSSI DI POTENZA ---
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen0, name="Livello 0: No Redispatching (Termico Rigido)", line=dict(color='#d62728', width=2, dash='dot')), row=1, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen1, name="Livello 1: Redispatch Semplice (Termico al Minimo)", line=dict(color='#ff7f0e', width=2)), row=1, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen2, name="Livello 2: Smart Grid Tech (Peak Shaving BESS/HVDC)", line=dict(color='#2ca02c', width=3)), row=1, col=1)
-
-    # --- GRAFICO 2: TEMPERATURE CAVO ---
-    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen0, name="Temp - No Redispatching", line=dict(color='#d62728', width=2, dash='dot'), showlegend=False), row=2, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen1, name="Temp - Redispatch Semplice", line=dict(color='#ff7f0e', width=2), showlegend=False), row=2, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen2, name="Temp - Smart Grid Tech", line=dict(color='#2ca02c', width=3.5), showlegend=False), row=2, col=1)
-
-    # Linea limite di sicurezza normativa CEI
-    fig_dash.add_hline(y=75.0, line_dash="dash", line_color="black", lw=2,
-                  annotation_text="Limite CEI EN 50341 (75°C)", annotation_position="bottom left", row=2, col=1)
-
-    # Ottimizzazione del Layout per eliminare i problemi di sovrapposizione visiva
-    fig_dash.update_layout(
-        margin=dict(t=60, b=40, l=60, r=40),
-        height=650, 
-        template="plotly_white", 
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
-    )
-
-    fig_dash.update_xaxes(title_text="Tempo (Minuti)", row=2, col=1)
-    fig_dash.update_yaxes(title_text="Potenza [MW]", row=1, col=1)
-    fig_dash.update_yaxes(title_text="Temperatura [°C]", row=2, col=1)
-
-    # Rendering del grafico interattivo all'interno di Streamlit
-    st.plotly_chart(fig_dash, use_container_width=True)
-    
-    # Sottoregistro dei dati di sintesi dinamici sotto il grafico
-    st.markdown("### 📋 Indicatori di Performance Energetica (KPI) estratti in tempo reale:")
-    kpi1, kpi2, kpi3 = st.columns(3)
-    
-    with kpi1:
-        st.metric(
-            label="Temperatura Max (No Redispatch)", 
-            value=f"{max(t_scen0):.1f} °C", 
-            delta=f"+{max(t_scen0)-75.0:.1f} °C sopra il limite", 
-            delta_color="inverse"
-        )
-    with kpi2:
-        st.metric(
-            label="Temperatura Max (Redispatch Semplice)", 
-            value=f"{max(t_scen1):.1f} °C", 
-            delta=f"+{max(t_scen1)-75.0:.1f} °C sopra il limite" if max(t_scen1) > 75 else "Sicuro",
-            delta_color="inverse" if max(t_scen1) > 75 else "normal"
-        )
-    with kpi3:
-        st.metric(
-            label="Temperatura Max (Smart Grid Tech)", 
-            value=f"{max(t_scen2):.1f} °C", 
-            delta=f"-{75.0-max(t_scen2):.1f} °C sotto il limite", 
-            delta_color="off"
-        )
+    fig
