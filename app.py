@@ -3,6 +3,23 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import segno
+import io
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("📱 Link Rapido al Progetto")
+
+url_progetto = "https://ternadigitaltwinsardegna-8qhaxkm4racpwab2w3xxvr.streamlit.app/"
+
+# Genera il QR Code in memoria
+qrcode = segno.make_qr(url_progetto)
+
+# Converte il QR code in un flusso di immagini PNG (puoi impostare i colori in HEX)
+buffer = io.BytesIO()
+qrcode.save(buffer, kind='png', scale=5, dark='#000000', light='#ffffff')
+
+# Rendering su Streamlit
+st.sidebar.image(buffer.getvalue(), caption="Inquadra per accedere alla documentazione", use_container_width=True)
 
 # Configurazione della pagina Streamlit (Modalità Wide obbligatoria per le Dashboard)
 st.set_page_config(
