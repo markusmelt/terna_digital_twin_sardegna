@@ -162,9 +162,9 @@ with tab1:
                 x=0.02,
                 y=0.98,
                 xanchor="left",
-                yanchor="top",
+                yanchor="bottom",
                 bgcolor="rgba(0, 0, 0, 0)", # Completamente trasparente
-                font=dict(color="white")     # Forza il testo in bianco per sicurezza
+                font=dict(color="blue")     
             )
         )
         
