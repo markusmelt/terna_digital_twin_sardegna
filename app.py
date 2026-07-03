@@ -125,10 +125,11 @@ with tab1:
         ))
         
         # Linea 2: Elettrodotto HVDC SA.PE.I. (Selargius -> Lazio)
+        # CORRETTO: rimosso dash='dash' che causava il crash
         fig_map.add_trace(go.Scattermapbox(
             lat=[39.2600, 41.4800], lon=[9.1600, 12.8800],
             mode='lines',
-            line=dict(width=3, color='#2ca02c', dash='dash'),
+            line=dict(width=4, color='#2ca02c'), 
             name='Elettrodotto Sottomarino HVDC SA.PE.I.',
             hoverinfo='text',
             text='Collegamento in Corrente Continua (Esportazione Eccedenze Verde)'
