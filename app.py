@@ -150,7 +150,7 @@ with tab1:
         # Impostazioni Layout Mappa (Tema scuro per perfetto contrasto con la legenda)
         fig_map.update_layout(
             mapbox=dict(
-                style="carto-darkmatter", # Cambiato in tema scuro nativo
+                style="open-street-map", # Cambiato in tema scuro nativo
                 center=dict(lat=40.2, lon=10.5),
                 zoom=5.5
             ),
