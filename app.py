@@ -147,17 +147,25 @@ with tab1:
             name='Infrastrutture Chiave'
         ))
 
-        # Impostazioni Layout Mappa (Inquadratura centrata sul Mar Tirreno / Sardegna)
+        # Impostazioni Layout Mappa (Tema scuro per perfetto contrasto con la legenda)
         fig_map.update_layout(
             mapbox=dict(
-                style="open-street-map",
+                style="carto-darkmatter", # Cambiato in tema scuro nativo
                 center=dict(lat=40.2, lon=10.5),
                 zoom=5.5
             ),
             margin=dict(l=0, r=0, t=0, b=0),
             height=450,
             showlegend=True,
-            legend=dict(x=0.02, y=0.02, bgcolor="rgba(255, 255, 255, 0.8)")
+            # NUOVA LEGENDA TRASPARENTE: Sfrutta lo sfondo scuro per far risaltare il testo bianco di Streamlit
+            legend=dict(
+                x=0.02,
+                y=0.98,
+                xanchor="left",
+                yanchor="top",
+                bgcolor="rgba(0, 0, 0, 0)", # Completamente trasparente
+                font=dict(color="white")     # Forza il testo in bianco per sicurezza
+            )
         )
         
         st.plotly_chart(fig_map, use_container_width=True)
