@@ -114,7 +114,30 @@ with tab1:
     autoconsumo_totale = totale_lordo - totale_netto
 
 # 2. KPI Summary Cards in alto
-    kpi1, kpi2, kpi3 = st.columns(3)
+    mappa_col, kpi1, kpi2, kpi3 = st.columns(4)
+    
+    with mappa_col:
+        st.subheader("Hub Sardegna")
+        
+        fig_mini_map = go.Figure(go.Scattermapbox(
+            lat=[40.0],
+            lon=[9.0],
+            mode='markers',
+            marker=go.scattermapbox.Marker(size=12, color='#1f77b4', opacity=0.9), 
+            showlegend=False
+        ))
+
+        fig_mini_map.update_layout(
+            mapbox=dict(
+                style="light", #sfondo bianco
+                center=dict(lat=40.1, lon=9.1),
+                zoom=5.8
+            ),
+            margin=dict(l=0, r=0, t=30, b=0),
+            height=350
+        )
+        st.plotly_chart(fig_mini_map, use_container_width=True)
+    
     with kpi1:
         st.metric(label="Capacità Lorda Totale", value=f"{totale_lordo:,.2f} MW".replace(",", "."))
     with kpi2:
@@ -168,29 +191,7 @@ with tab1:
         )
         st.plotly_chart(fig_mix, use_container_width=True)
 
-    with mappa_col:
-        st.subheader("Hub Sardegna")
-        
-        # Mappa Scatter Mapbox di riferimento (leggera e pulita)
-        # Inseriamo solo il centro geometrico dell'isola come punto di riferimento stilistico
-        fig_mini_map = go.Figure(go.Scattermapbox(
-            lat=[40.0],
-            lon=[9.0],
-            mode='markers',
-            marker=go.scattermapbox.Marker(size=1, color='rgba(0,0,0,0)'), # Invisibile, serve solo a centrare
-            showlegend=False
-        ))
 
-        fig_mini_map.update_layout(
-            mapbox=dict(
-                style="carto-darkmatter", # Coerente con lo stile tech scuro scelto prima
-                center=dict(lat=40.1, lon=9.1),
-                zoom=5.8
-            ),
-            margin=dict(l=0, r=0, t=30, b=0),
-            height=350
-        )
-        st.plotly_chart(fig_mini_map, use_container_width=True)
 
 # ==========================================
 # TAB 2: MAPPA DEGLI ASSET
