@@ -102,7 +102,7 @@ tab1, tab2, tab3 = st.tabs(["⚡Capacità di generazione - Sardegna", "🗺️ M
 with tab1:
     #st.subheader("📊 Capacità di Generazione Regionale (Sardegna)")
     st.markdown("""
-    Analisi della **Potenza Efficiente Lorda e Netta** censita sul territorio sardo.""") # I dati evidenziano il divario di autoconsumo delle centrali termoelettriche e la crescente quota di accumuli stand-alone
+    Analisi della **Potenza Efficiente Lorda e Netta**.""") # I dati evidenziano il divario di autoconsumo delle centrali termoelettriche e la crescente quota di accumuli stand-alone
 
 # 1. Definizione dei Dati Reali estratti dalla Dashboard Terna
     fonti = ['Eolico', 'Fotovoltaico', 'Termoelettrico', 'Idrico', 'Accumulo Stand-alone']
