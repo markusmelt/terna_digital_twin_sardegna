@@ -367,14 +367,27 @@ with tab3:
     st.markdown("---")
     
     # Monitoraggio dinamico dello stato della sicurezza
-    if max(t_scen0) > 75.0 or max(t_scen1) > 75.0:
+    if max(t_scen0) > 75.0:
         st.error(f"""
-        ⚠️ **Rilevato Criticità Termica di Rete:** Nello Scenario 0 (e potenzialmente nello Scenario 1), l'energia eolica immessa supera la capacità di trasporto (*Ampacity*) dei conduttori a 380 kV diretti a Selargius. 
-        Il superamento dei 75°C normativi CEI comporta una dilatazione termica del cavo con pericolosa riduzione delle franchigie dal suolo (rischio di scarica elettrica a terra).
+        ⚠️ **Rilevato Criticità Termica di Rete:** Senza alcun intervento correttivo, l'esplosione della rampa eolica porta il conduttore a {max(t_scen0):.1f}°C. 
+        Il superamento dei 75°C normativi CEI comporta una pericolosa dilatazione termica del cavo con conseguente aumento della freccia (rischio di scarica elettrica a terra o blackout).
         """)
-        
-    if max(t_scen2) <= 75.0:
+
+    if max(t_scen1) > 75.0:
+        st.error(f"""
+        ⚠️ **Sofferenza nello Scenario 1 (Redispatch Semplice):** Ridurre la produzione termica al minimo tecnico di {thermal_min} MW aiuta, ma non basta. 
+        La temperatura di picco tocca i {max(t_scen1):.1f}°C, violando comunque i limiti di sicurezza della linea a 380 kV.
+        """)
+    else:
         st.success(f"""
-        ✅ **Stabilità Garantita (Scenario 2):** L'attivazione tempestiva dei {sg_threshold} MW di accumulo BESS coordinati dalla sottostazione intelligente di Selargius riduce istantaneamente il picco termico. 
-        L'energia eccedente viene instradata in corrente continua sul **Tyrrhenian Link**, mantenendo la temperatura del cavo a un picco massimo di {max(t_scen2):.1f}°C, pienamente entro i margini di sicurezza.
+        ✅ **Successo Operativo nello Scenario 1 (Redispatch Semplice):** Il taglio della produzione termica al minimo tecnico di {thermal_min} MW è **sufficiente** a risolvere la congestione!
+        La linea si stabilizza a un picco massimo di {max(t_scen1):.1f}°C, rientrando perfettamente nei margini normativi senza richiedere l'attivazione dei sistemi Smart Grid.
         """)
+
+    if max(t_scen1) > 75.0 and max(t_scen2)<=75.0:
+        st.success(f"""
+        🚀 **Risoluzione Smart Grid nello Scenario 2:** Laddove il redispatch tradizionale ha fallito, l'attivazione coordinata dei {sg_threshold} MW di batterie (BESS) a Selargius e il trasferimento di potenza sul **Tyrrhenian Link** tagliano la testa al picco. 
+        La temperatura scende in sicurezza a {max(t_scen2):.1f}°C.
+        """)
+    
+
