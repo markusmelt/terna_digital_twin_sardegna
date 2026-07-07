@@ -6,31 +6,9 @@ from plotly.subplots import make_subplots
 import segno
 import io
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("📱 Link Rapido al Progetto")
-
-url_progetto = "https://ternadigitaltwinsardegna-8qhaxkm4racpwab2w3xxvr.streamlit.app/"
-
-# Genera il QR Code in memoria
-qrcode = segno.make_qr(url_progetto)
-
-# Converte il QR code in un flusso di immagini PNG (puoi impostare i colori in HEX)
-buffer = io.BytesIO()
-qrcode.save(buffer, kind='png', scale=5, dark='#000000', light='#ffffff')
-
-# Rendering su Streamlit
-st.sidebar.image(buffer.getvalue(), caption="Inquadra per accedere alla documentazione", use_container_width=True)
-
-# Configurazione della pagina Streamlit (Modalità Wide obbligatoria per le Dashboard)
-st.set_page_config(
-    page_title="Terna Digital Twin Sandbox - Sardegna",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # --- INTESTAZIONE PRINCIPALE ---
-st.title("⚡ PoC Digital Twin: Matrice di Evoluzione del Dispacciamento Sardo")
+st.title("⚡ Digital Twin PoC for Terna Asset Management")
 st.markdown("""
 *Strumento di simulazione interattiva per l'analisi del transitorio termico sulla dorsale elettrica a 380 kV e la valutazione dei meccanismi di flessibilità di rete.*
 """)
@@ -45,9 +23,31 @@ thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_valu
 sg_threshold = st.sidebar.slider("Soglia di Sicurezza Smart Grid / BESS (MW)", min_value=700, max_value=950, value=850, step=25)
 
 st.sidebar.markdown("---")
-st.sidebar.info("""
-💡 **Consiglio per il Colloquio:** Mostra alla commissione come alzando il picco eolico il 'Redispatch Semplice' fallisca drammaticamente, rendendo obbligatorio l'uso delle tecnologie Smart Grid presenti a Selargius.
-""")
+st.sidebar.info("""💡 **Info:** Aumentando la produzione eolica il 'Redispatch Semplice' fallisce rendendo obbligatorio l'uso delle tecnologie Smart Grid.""")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("📱 Link al progetto")
+
+url_progetto = "https://ternadigitaltwinsardegna-8qhaxkm4racpwab2w3xxvr.streamlit.app/"
+
+# Genera il QR Code in memoria
+qrcode = segno.make_qr(url_progetto)
+
+# Converte il QR code in un flusso di immagini PNG 
+buffer = io.BytesIO()
+qrcode.save(buffer, kind='png', scale=5, dark='#000000', light='#ffffff')
+
+# Rendering su Streamlit
+st.sidebar.image(buffer.getvalue(), caption="Inquadra per accedere alla web-app", use_container_width=True)
+
+# Configurazione della pagina Streamlit 
+st.set_page_config(
+    page_title="Terna Digital Twin Sardegna - Proof of Concept",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 
 # --- MOTORE DI CALCOLO DELLA SIMULAZIONE ---
 minuti = np.arange(0, 121)
