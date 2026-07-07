@@ -194,9 +194,9 @@ with tab2:
         st.plotly_chart(fig_map, use_container_width=True)
 
 # ==========================================
-# TAB 2: SANDBOX DIGITAL TWIN (GRAFICI)
+# TAB 3: SIMULAZIONI
 # ==========================================
-with tab2:
+with tab3:
     st.subheader("📊 Analisi Comparativa degli Scenari Operativi")
     
     # Creazione della Dashboard a due livelli con distanze corrette
