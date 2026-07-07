@@ -100,7 +100,18 @@ tab1, tab2, tab3 = st.tabs(["⚡Capacità di generazione - Sardegna", "🗺️ M
 # TAB 1: CAPACITA' DI GENERAZIONE
 # ==========================================
 with tab1:
-    col1, col2 = st.columns([1, 1])
+    #st.subheader("📊 Capacità di Generazione Regionale (Sardegna)")
+    st.markdown("""
+    Analisi della **Potenza Efficiente Lorda e Netta** censita sul territorio sardo.""") # I dati evidenziano il divario di autoconsumo delle centrali termoelettriche e la crescente quota di accumuli stand-alone
+
+# 1. Definizione dei Dati Reali estratti dalla Dashboard Terna
+    fonti = ['Eolico', 'Fotovoltaico', 'Termoelettrico', 'Idrico', 'Accumulo Stand-alone']
+    potenza_lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
+    potenza_netta = [1193.20, 1722.09, 2174.92, 463.42, 61.90]
+    
+    totale_lordo = sum(potenza_lorda)
+    totale_netto = sum(potenza_netta)
+    autoconsumo_totale = totale_lordo - totale_netto
 
 # ==========================================
 # TAB 2: MAPPA DEGLI ASSET
