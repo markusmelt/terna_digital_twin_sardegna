@@ -397,5 +397,11 @@ with tab3:
         🚀 **Risoluzione Smart Grid nello Scenario 2:** Laddove il redispatch tradizionale ha fallito, l'attivazione coordinata dei {sg_threshold} MW di batterie (BESS) e il trasferimento di potenza sul **Tyrrhenian Link** tagliano la testa al picco. 
         La temperatura scende in sicurezza a {max(t_scen2):.1f}°C.
         """)
+    elif max(t_scen1) > 75.0 and max(t_scen2) > 75.0:
+        st.warning(f"""
+        ⚡**Sofferenza Persistente nello Scenario 2 (Smart Grid al Limite):** Nonostante l'abbattimento termico locale e l'assorbimento di {sg_threshold} MW da parte dei sistemi BESS accoppiati al Tyrrhenian Link, la temperatura massima del cavo si attesta a {max(t_scen2):.1f}°C, rimanendo sopra la soglia CEI di 75°C. 
+       
+        **Nota di Esercizio:** In questa specifica configurazione meteo-ambientale estrema, le difese tecnologiche automatiche non bastano. Il centro di dispacciamento di Terna deve intervenire con ordini restrittivi di **Curtailment (Taglio della produzione eolica non programmabile)** o riconfigurazioni topologiche d'emergenza sulla rete di trasmissione per prevenire il sovraccarico distruttivo.
+        """)
     
 
