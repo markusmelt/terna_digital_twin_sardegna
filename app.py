@@ -211,7 +211,7 @@ with tab2:
         # Creazione Mappa GIS Interattiva con Plotly Mapbox (Stile Open-Street-Map nativo)
         fig_map = go.Figure()
 
-        # Linea 1: Dorsale Sarda Nord-Sud (CORRETTA la chiusura delle parentesi)
+        # Linea 1: Dorsale Sarda Nord-Sud 
         fig_map.add_trace(go.Scattermapbox(
             lat=[40.8400, 39.2600], lon=[8.3200, 9.1600],
             mode='lines+markers',
@@ -221,14 +221,14 @@ with tab2:
             text='Dorsale Principale di Trasmissione Sarda (Soggetta a Sovraccarico Termico)'
         ))
         
-        # Linea 2: Elettrodotto HVDC SA.PE.I. (Selargius -> Lazio)
+        # Linea 2: Elettrodotto HVDC Tyrrhenian link
         fig_map.add_trace(go.Scattermapbox(
-            lat=[39.2600, 41.4800], lon=[9.1600, 12.8800],
+            lat=[39.2600, 39.1961085, 37.9725134, 40.569476], lon=[9.1600, 9.3295586, 13.7556869, 14.8238343],
             mode='lines',
             line=dict(width=4, color='#2ca02c'), 
-            name='Elettrodotto Sottomarino HVDC SA.PE.I.',
+            name='Tyrrhenian Link',
             hoverinfo='text',
-            text='Collegamento in Corrente Continua (Esportazione Eccedenze Verde)'
+            text='Collegamento in Corrente Continua'
         ))
 
         # Aggiunta dei nodi puntuali sulla mappa
@@ -237,7 +237,7 @@ with tab2:
             mode='markers',
             marker=go.scattermapbox.Marker(
                 size=df_asset['Dimensioni'],
-                color=['#d62728', '#1f77b4', '#7f7f7f'],
+                color=['#d62728', '#d62728', '#d62728','#d62728'],
                 opacity=0.9
             ),
             text=df_asset['Sito'] + "<br>" + df_asset['Tipo'],
