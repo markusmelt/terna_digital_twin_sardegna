@@ -185,25 +185,26 @@ with tab2:
     with col1:
         st.subheader("📖 Il Contesto della Rete Sarda")
         st.markdown(f"""
-        La simulazione analizza l'asse elettrico Nord-Sud della Sardegna durante una giornata caratterizzata da un improvviso fronte di vento nel Nord dell'isola (+{wind_peak} MW) in concomitanza con il tramonto solare.
-        
-        * **Il Vincolo Fisico:** Le centrali tradizionali del Nord (es. Fiume Santo) e del Sud (es. Sulcis) devono mantenere una generazione minima (**{thermal_min} MW**) per garantire la stabilità della tensione e della frequenza (Inerzia di rete).
-        * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV.
-        * **Il Centro del Nodo Tecno-Geografico:** La **Stazione Elettrica di Selargius (CA)**. È qui che l'energia in eccesso viene governata attraverso i Compensatori Sincroni (inerzia artificiale) e deviata sull'elettrodotto sottomarino **SA.PE.I.** per essere esportata in corrente continua verso il Lazio, salvando la stabilità isolana.
+        La simulazione analizza il comportamento della rete di trasmissione sarda durante una giornata caratterizzata dall'arrivo di un repentino fronte meteorologico nell'isola in concomitanza con il tramonto solare.        
+        * **Lo shock eolico:** Con il tramonto, la produzione fotovoltaica si azzera bruscamente, ma l'arrivo simultaneo di una perturbazione comporta un'accelerazione del vento tale da comportare un picco di produzione eolica di **{wind_peak} MW**.
+        * **Il Vincolo Fisico:** Per garantire la stabilità di tensione e l'inerzia elettrica, le centrali termoelettriche non possono essere spente del tutto ma devono mantenere una generazione minima (**{thermal_min} MW**).
+        * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV in ingresso alla Stazione elettrica di Selargius.
+        * **Il Limite dell'Accumulo Stand Alone:** La Sardegna dispone di un comparto di accumulo stand alone (BESS) che, sebbene in forte crescita, è limitato a una capacità operativa netta di **{sg_threshold} MW**. Davanti a un surplus energetico imprevisto, le batterie reali possono saturare la loro capacità di assorbimento in pochi minuti, risultando da sole insufficienti a contenere la congestione.
+        * **La Soluzione di Rete - il Tyrrhenian Link:** In corrispondenza della stazione elettrica di Selargius, l'energia in eccesso viene governata e deviata sul nuovo elettrodotto sottomarino **HVDC Tyrrhenian Link** per essere esportata verso la Sicilia e la Campania, decongestionando l'isola e garantendo la stabilità della rete elettrica.
         """)
         
-        st.info("📌 *Usa la mappa a destra per esplorare visivamente il tragitto dell'energia dai centri di produzione eolici del Nord fino all'hub tecnologico di Selargius e al Continente.*")
+        
 
     with col2:
-        st.subheader("🗺️ Visualizzazione GIS degli Asset Terna")
+        st.subheader("🗺️ Visualizzazione della rete elettrica")
         
         # Dizionario Geografico delle infrastrutture coinvolte
         data_asset = {
-            'Sito': ['Hub Eolico / Fiume Santo', 'Nodo Strategico Selargius', 'Terminale SA.PE.I. Lazio'],
-            'Lat': [40.8400, 39.2600, 41.4800],
-            'Lon': [8.3200, 9.1600, 12.8800],
-            'Tipo': ['Produzione (Nord)', 'Hub di Controllo & Stazione (Sud)', 'Esportazione (Continente)'],
-            'Dimensioni': [20, 25, 15]
+            'Sito': ['Stazione elettrica Selargius', 'Terra Mala (Cagliari)','Fiumetorto (Termini Imerese)', 'Torre Tuscia Magazzeno (Battipaglia)'],
+            'Lat': [39.2600, 39.1961085, 37.9725134, 40.569476],
+            'Lon': [9.1600, 9.3295586, 13.7556869, 14.8238343],
+            'Tipo': ['Hub di Controllo & Stazione', 'Nodo di Esportazione','Hub di Importazione ed Esportazione','Hub di Importazione ed Esportazione'],
+            'Dimensioni': [20, 10, 20, 20]
         }
         df_asset = pd.DataFrame(data_asset)
 
