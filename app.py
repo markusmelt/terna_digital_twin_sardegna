@@ -320,7 +320,7 @@ with tab3:
     fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen2, name="Temp - Smart Grid Tech", line=dict(color='#2ca02c', width=3.5), showlegend=False), row=2, col=1)
 
     # Linea limite di sicurezza normativa CEI
-    fig_dash.add_hline(y=75.0, line_dash="dash", line_color="black", line_width=2,
+    fig_dash.add_hline(y=75.0, line_dash="dash", line_color="magenta", line_width=2,
                         annotation_text="Limite CEI EN 50341 (75°C)", annotation_position="bottom left", row=2, col=1)
 
     # Ottimizzazione del Layout
