@@ -125,61 +125,72 @@ with tab1:
 
     st.markdown("---")
 
-# 3. Creazione dei Grafici Affiancati
-    grafico_col1, grafico_col2 = st.columns(2)
+# 3. Creazione dei Grafici e Mappa su Layout a 3 Colonne (Proporzioni 4:4:3)
+    grafico_col1, grafico_col2, mappa_col = st.columns([4, 4, 3])
 
     with grafico_col1:
-        st.subheader("Confronto Potenza Lorda vs Netta")
+        st.subheader("Confronto Lordo vs Netta")
         
-        # Grafico a barre raggruppate con Plotly
         fig_confronto = go.Figure()
         fig_confronto.add_trace(go.Bar(
-            x=fonti,
-            y=potenza_lorda,
-            name='Potenza Lorda',
-            marker_color='#1f77b4'
+            x=fonti, y=potenza_lorda, name='Lorda', marker_color='#1f77b4'
         ))
         fig_confronto.add_trace(go.Bar(
-            x=fonti,
-            y=potenza_netta,
-            name='Potenza Netta',
-            marker_color='#2ca02c'
+            x=fonti, y=potenza_netta, name='Netta', marker_color='#2ca02c'
         ))
 
         fig_confronto.update_layout(
             barmode='group',
-            xaxis_title="Fonte Energetica",
+            xaxis_title="Fonte",
             yaxis_title="Potenza [MW]",
-            legend=dict(x=0.7, y=0.95, bgcolor='rgba(255,255,255,0.1)'),
-            margin=dict(l=20, r=20, t=30, b=20),
-            height=400
+            legend=dict(x=0.5, y=0.95, bgcolor='rgba(255,255,255,0.1)'),
+            margin=dict(l=10, r=10, t=30, b=10),
+            height=380
         )
         st.plotly_chart(fig_confronto, use_container_width=True)
 
     with grafico_col2:
-        st.subheader("Mix Energetico Regionale (Capacità Netta)")
+        st.subheader("Mix Energetico (Netto)")
         
-        # Grafico a torta con Plotly per mostrare le quote percentuali
         fig_mix = go.Figure(data=[go.Pie(
             labels=fonti,
             values=potenza_netta,
-            hole=.3, # Trasforma il grafico a torta in una ciambella (Donut chart), molto moderno
-            textinfo='percent+label',
+            hole=.3,
+            textinfo='percent', # Mostra solo la percentuale per non affollare il grafico
             marker=dict(colors=['#4CAF50', '#FFC107', '#FF5722', '#00BCD4', '#9C27B0'])
         )])
 
         fig_mix.update_layout(
-            showlegend=False, # Nascondiamo la legenda perché le etichette sono già sul grafico
-            margin=dict(l=20, r=20, t=30, b=20),
-            height=400
+            showlegend=True,
+            legend=dict(orientation="h", y=-0.1, x=0), # Legenda orizzontale sotto il grafico
+            margin=dict(l=10, r=10, t=30, b=10),
+            height=380
         )
         st.plotly_chart(fig_mix, use_container_width=True)
 
-    # 4. Nota tecnica di chiusura Tab
-    st.info("""
-    💡 **Evidenza per il Dispacciamento:** Il comparto termoelettrico sardo presenta il più alto tasso di autoconsumo (~220 MW assorbiti dai servizi ausiliari di centrale). 
-    L'integrazione di **61.90 MW netti di Accumuli Stand-alone (+282% anno su anno)** rappresenta l'asset tecnologico chiave gestito dal nodo di Selargius per mitigare l'intermittenza della rampa eolica da 1000 MW simulata nella Sandbox.
-    """)
+    with mappa_col:
+        st.subheader("Hub Sardegna")
+        
+        # Mappa Scatter Mapbox di riferimento (leggera e pulita)
+        # Inseriamo solo il centro geometrico dell'isola come punto di riferimento stilistico
+        fig_mini_map = go.Figure(go.Scattermapbox(
+            lat=[40.0],
+            lon=[9.0],
+            mode='markers',
+            marker=go.scattermapbox.Marker(size=1, color='rgba(0,0,0,0)'), # Invisibile, serve solo a centrare
+            showlegend=False
+        ))
+
+        fig_mini_map.update_layout(
+            mapbox=dict(
+                style="carto-darkmatter", # Coerente con lo stile tech scuro scelto prima
+                center=dict(lat=40.1, lon=9.1),
+                zoom=5.8
+            ),
+            margin=dict(l=0, r=0, t=30, b=0),
+            height=350
+        )
+        st.plotly_chart(fig_mini_map, use_container_width=True)
 
 # ==========================================
 # TAB 2: MAPPA DEGLI ASSET
