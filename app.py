@@ -34,6 +34,11 @@ percentuale_BESS = (sg_threshold / 61.90) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_BESS:.1f}%** della potenza netta di accumulo.")
 
 st.sidebar.markdown("---")
+st.sidebar.subheader("🌤️ Condizioni Meteo Ambientali")
+
+t_ambient = st.sidebar.slider("Temperatura Ambiente (°C)", min_value=-5.0, max_value=50.0, value=25.0, step=1.0) # slider temperatura ambiente
+
+st.sidebar.markdown("---")
 st.sidebar.info("""💡 **Info:** Modifica gli slider per simulare scenari differenti.""")
 
 st.sidebar.markdown("---")
@@ -86,11 +91,10 @@ bess_absorption = np.where(minuti < 20, 0, sg_threshold)
 p_linea_scen2 = np.clip(p_linea_scen1 - bess_absorption, 0, None)
 
 # Modello Dinamico di Integrazione Termica (Equazione del bilancio termico transitorio)
-def calcola_temperatura_cavo(potenza_mw_vettore):
+def calcola_temperatura_cavo(potenza_mw_vettore, T_ambient):
     V_linea = 380000  # 380 kV
     cos_phi = 0.9
     I_max = 1600.0    # Corrente limite nominale
-    T_ambient = 25.0
     T_max = 85.0
     tau = 20.0        # Costante di tempo termica (minuti)
     dt = 1.0
@@ -104,9 +108,9 @@ def calcola_temperatura_cavo(potenza_mw_vettore):
         t_cavo.append(t_cavo[-1] + dT + np.random.normal(0, 0.02))
     return t_cavo
 
-t_scen0 = calcola_temperatura_cavo(p_linea_scen0)
-t_scen1 = calcola_temperatura_cavo(p_linea_scen1)
-t_scen2 = calcola_temperatura_cavo(p_linea_scen2)
+t_scen0 = calcola_temperatura_cavo(p_linea_scen0, t_ambient)
+t_scen1 = calcola_temperatura_cavo(p_linea_scen1, t_ambient)
+t_scen2 = calcola_temperatura_cavo(p_linea_scen2, t_ambient)
 
 
 # --- INTERFACCIA UTENTE A TAB ---
