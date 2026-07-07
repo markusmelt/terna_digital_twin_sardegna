@@ -17,15 +17,21 @@ st.markdown("""
 st.sidebar.header("🎛️ Parametri del Simulatore")
 
 # Slider dinamici 
-wind_peak = st.sidebar.slider("Picco della Rampa Eolica (MW)", min_value=0, max_value=1200, value=1000, step=50)
+wind_peak = st.sidebar.slider("Picco della Rampa Eolica (MW)", min_value=0, max_value=1200, value=1000, step=50) # slider eolico
 percentuale_eolico = (wind_peak / 1193.20) * 100
-st.sidebar.caption(f"💨 Equivale al **{percentuale_eolico:.1f}%** della potenza netta installata in Sardegna.")
-thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=400, value=150, step=25)
+st.sidebar.caption(f"💨 Equivale al **{percentuale_eolico:.1f}%** della potenza netta installata.")
+
+thermal_nominal = st.sidebar.slider("Potenza Termica Nominale Iniziale (MW)", min_value=300, max_value=600, value=450, step=25, help="Livello di generazione delle centrali termoelettriche prima dell'evento meteo.") # slider potenza termica iniziale nominale
+percentuale_nominal = (thermal_nominal / 2174.92) * 100
+st.sidebar.caption(f"🏭 Equivale al **{percentuale_nominal:.1f}%** della potenza netta termica.")
+
+thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=int(thermal_nominal), value=150, step=25, help="Il limite inferiore a cui la centrale può scendere durante il redispatching.") # slider minimo tecnico centrali termiche
 percentuale_termico = (thermal_min / 2174.92) * 100
-st.sidebar.caption(f"💨 Equivale al **{percentuale_termico:.1f}%** della potenza netta installata in Sardegna.")
-sg_threshold = st.sidebar.slider("Capacità di accumulo stand alone (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0)
+st.sidebar.caption(f"💨 Equivale al **{percentuale_termico:.1f}%** della potenza netta termica.")
+
+sg_threshold = st.sidebar.slider("Capacità di accumulo stand alone (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0) # slider BESS
 percentuale_BESS = (sg_threshold / 61.90) * 100
-st.sidebar.caption(f"💨 Equivale al **{percentuale_BESS:.1f}%** della potenza netta installata in Sardegna.")
+st.sidebar.caption(f"💨 Equivale al **{percentuale_BESS:.1f}%** della potenza netta di accumulo.")
 
 st.sidebar.markdown("---")
 st.sidebar.info("""💡 **Info:** Modifica gli slider per simulare scenari differenti.""")
@@ -63,12 +69,12 @@ wind_base = np.where(minuti < 20, 100, wind_peak)
 eolico_mw = np.clip(wind_base + np.random.normal(0, 10, len(minuti)), 0, None)
 solare_mw = np.clip(100 - (minuti * 1.2) + np.random.normal(0, 2, len(minuti)), 0, None)
 
-# Scenario 0: No Redispatching (Termico rigido a 350 MW)
-thermal_scen0 = np.ones(len(minuti)) * 350
+# Scenario 0: No Redispatching (Il termico rimane rigido al valore scelto nello slider)
+thermal_scen0 = np.ones(len(minuti)) * thermal_nominal
 p_linea_scen0 = eolico_mw + solare_mw + thermal_scen0
 
-# Scenario 1: Redispatching Semplice (Termico scende al minimo configurato al min 20)
-thermal_scen1 = np.where(minuti < 20, 350, thermal_min)
+# Scenario 1: Redispatching Semplice (Termico parte dal nominale e scende al minimo configurato al min 20)
+thermal_scen1 = np.where(minuti < 20, thermal_nominal, thermal_min)
 p_linea_scen1 = eolico_mw + solare_mw + thermal_scen1
 
 # Scenario 2: Smart Grid Tech (Azione combinata BESS + HVDC Tyrrhenian Link)
