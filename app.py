@@ -116,28 +116,64 @@ with tab1:
 # 2. KPI Summary Cards in alto
     mappa_col, kpi1, kpi2, kpi3 = st.columns(4)
     
-    with mappa_col:
+with mappa_col:
         st.subheader("Hub Sardegna")
         
-        fig_mini_map = go.Figure(go.Scattermapbox(
-            lat=[40.0],
-            lon=[9.0],
-            mode='markers',
-            marker=go.scattermapbox.Marker(size=1, color='#1f77b4', opacity=0.9), 
+        # Usiamo go.Choropleth con i dati interni delle regioni italiane
+        # Nota: '0d' è il codice ISO o identificativo che Plotly associa alla Sardegna nei suoi dataset locali 
+        # Per andare sul sicuro e disegnare la sagoma usiamo un approccio geografico nativo ISO
+        fig_mini_map = go.Figure(go.Choropleth(
+            locations=['IT-88'], # Codice ISO della Sardegna
+            z=[1], # Valore fittizio per attivare la scala colore
+            locationmode='ISO-3', # Modalità standard per i confini nazionali/subnazionali
+            colorscale=[[0, '#1f77b4'], [1, '#1f77b4']], # Forziamo il colore Blu sia per il minimo che per il massimo
+            showscale=False, # Nascondiamo la barra graduata dei colori
+            marker_line_color='white', # Contorno della regione bianco
             hoverinfo='text',
-            text='Nodo Sardegna',
+            text='Regione Sardegna (Hub Energetico)'
+        ))
+
+        # Se il Choropleth ISO non si centra perfettamente a causa dei limiti di Plotly offline,
+        # l'alternativa più robusta e priva di bug in Streamlit è disegnare la Sardegna 
+        # usando go.Scatter con le coordinate reali dei suoi confini semplificati su sfondo bianco:
+        
+        # Coordinate di massima per disegnare la sagoma della Sardegna
+        lats_sardegna = [41.3, 41.0, 40.9, 40.6, 39.2, 38.9, 39.0, 39.3, 40.1, 40.5, 40.9, 41.3]
+        lons_sardegna = [9.2,  9.6,  9.8,  9.8,  9.5,  9.0,  8.4,  8.4,  8.4,  8.6,  8.2,  9.2]
+
+        fig_mini_map = go.Figure()
+
+        # Disegnamo la sagoma come un poligono pieno blu
+        fig_mini_map.add_trace(go.Scatter(
+            x=lons_sardegna,
+            y=lats_sardegna,
+            fill="toself",
+            fillcolor='#1f77b4', # Il tuo Blu
+            mode='lines',
+            line=dict(color='#1f77b4', width=2),
+            hoverinfo='text',
+            text='Sardegna',
             showlegend=False
         ))
 
+        # Configurazione del layout per avere sfondo BIANCO assoluto e proporzioni corrette
         fig_mini_map.update_layout(
-            mapbox=dict(
-                style="light", #sfondo bianco
-                center=dict(lat=40.1, lon=9.1),
-                zoom=5.8
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            xaxis=dict(
+                visible=False, 
+                range=[7.5, 10.5] # Inquadratura longitudine
             ),
-            margin=dict(l=0, r=0, t=30, b=0),
+            yaxis=dict(
+                visible=False, 
+                range=[38.5, 41.5], # Inquadratura latitudine
+                scaleanchor="x",    # Evita che la Sardegna si deformi quando ridimensioni la finestra
+                scaleratio=1
+            ),
+            margin=dict(l=10, r=10, t=30, b=10),
             height=350
         )
+        
         st.plotly_chart(fig_mini_map, use_container_width=True)
     
     with kpi1:
