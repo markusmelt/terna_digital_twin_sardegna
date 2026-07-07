@@ -144,7 +144,7 @@ with tab1:
             barmode='group',
             xaxis_title="Fonte",
             yaxis_title="Potenza [MW]",
-            legend=dict(x=1.0, y=0.95, bgcolor='rgba(255,255,255,0.1)'),
+            legend=dict(x=0.75, y=0.95, bgcolor='rgba(255,255,255,0.1)'),
             margin=dict(l=10, r=10, t=30, b=10),
             height=380
         )
