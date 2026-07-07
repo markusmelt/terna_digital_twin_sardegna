@@ -149,7 +149,7 @@ with tab1:
     st.markdown("---")
 
 # 3. Creazione dei Grafici e Mappa su Layout a 3 Colonne (Proporzioni 4:4:3)
-    grafico_col1, grafico_col2, mappa_col = st.columns([4, 4, 3])
+    grafico_col1, grafico_col2 = st.columns([4, 4, 2])
 
     with grafico_col1:
         st.subheader("Confronto Lordo vs Netta")
