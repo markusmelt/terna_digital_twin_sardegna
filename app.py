@@ -346,8 +346,8 @@ with tab3:
         st.metric(
             label="Temperatura Max (No Redispatch)", 
             value=f"{max(t_scen0):.1f} °C", 
-            delta=f"+{max(t_scen0)-75.0:.1f} °C sopra il limite", 
-            delta_color="inverse"
+            delta=f"+{max(t_scen0)-75.0:.1f} °C sopra il limite" if max(t_scen0) > 75 else "Sicuro", 
+            delta_color="inverse" if max(t_scen0) > 75 else "normal"
         )
     with kpi2:
         st.metric(
@@ -358,10 +358,10 @@ with tab3:
         )
     with kpi3:
         st.metric(
-            label="Temperatura Max (Smart Grid Tech)", 
+            label="Temperatura Max (Tyrrhenian link)", 
             value=f"{max(t_scen2):.1f} °C", 
-            delta=f"-{75.0-max(t_scen2):.1f} °C sotto il limite", 
-            delta_color="off"
+            delta=f"-{75.0-max(t_scen2):.1f} °C sotto il limite" if max(t_scen2) < 75 else f"+{max(t_scen2)-75.0:.1f} °C sopra il limite", 
+            delta_color="inverse" if max(t_scen2) > 75 else "off"
         )
 
     st.markdown("---")
