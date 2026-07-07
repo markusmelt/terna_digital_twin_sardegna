@@ -95,16 +95,21 @@ def calcola_temperatura_cavo(potenza_mw_vettore, T_ambient):
     V_linea = 380000  # 380 kV
     cos_phi = 0.9
     I_max = 1600.0    # Corrente limite nominale
-    T_max = 85.0
+
+    # Delta T di progetto: a pieno carico (I_max), il cavo si scalda di 60°C sopra la temperatura ambiente
+    delta_T_max_joule = 60.0 
     tau = 20.0        # Costante di tempo termica (minuti)
     dt = 1.0
     
     corrente_ampere = (potenza_mw_vettore * 1e6) / (np.sqrt(3) * V_linea * cos_phi)
-    t_cavo = [T_ambient + (corrente_ampere[0]/I_max)**2 * (T_max - T_ambient)]
+    
+    # Temperatura iniziale (Stato stazionario al minuto 0)
+    t_iniziale = T_ambient + ((corrente_ampere[0] / I_max) ** 2) * delta_T_max_joule
+    t_cavo = [t_iniziale]
     
     for i in range(len(minuti) - 1):
-        T_target = T_ambient + (corrente_ampere[i] / I_max)**2 * (T_max - T_ambient)
-        dT = (1.0 / tau) * (T_target - t_cavo[-1]) * dt
+        T_target = T_ambient + ((corrente_ampere[i] / I_max) ** 2) * delta_T_max_joule ## Il target è: Temperatura Ambiente + l'effetto Joule proporzionale al quadrato della corrente
+        dT = (1.0 / tau) * (T_target - t_cavo[-1]) * dt # Equazione differenziale del transitorio termico
         t_cavo.append(t_cavo[-1] + dT + np.random.normal(0, 0.02))
     return t_cavo
 
