@@ -123,7 +123,7 @@ with tab1:
             lat=[40.0],
             lon=[9.0],
             mode='markers',
-            marker=go.scattermapbox.Marker(size=12, color='#1f77b4', opacity=0.9), 
+            marker=go.scattermapbox.Marker(size=1, color='#1f77b4', opacity=0.9), 
             hoverinfo='text',
             text='Nodo Sardegna',
             showlegend=False
