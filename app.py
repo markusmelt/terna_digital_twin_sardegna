@@ -358,7 +358,7 @@ with tab3:
         )
     with kpi3:
         st.metric(
-            label="Temperatura Max (Tyrrhenian link)", 
+            label="Temperatura Max (Peak Shaving BESS + Tyrrhenian link)", 
             value=f"{max(t_scen2):.1f} °C", 
             delta=f"-{75.0-max(t_scen2):.1f} °C sotto il limite" if max(t_scen2) < 75 else f"+{max(t_scen2)-75.0:.1f} °C sopra il limite", 
             delta_color="inverse" if max(t_scen2) > 75 else "off"
@@ -381,12 +381,12 @@ with tab3:
     else:
         st.success(f"""
         ✅ **Successo Operativo nello Scenario 1 (Redispatch Semplice):** Il taglio della produzione termica al minimo tecnico di {thermal_min} MW è **sufficiente** a risolvere la congestione!
-        La linea si stabilizza a un picco massimo di {max(t_scen1):.1f}°C, rientrando perfettamente nei margini normativi senza richiedere l'attivazione dei sistemi Smart Grid.
+        La linea si stabilizza a un picco massimo di {max(t_scen1):.1f}°C, rientrando perfettamente nei margini normativi senza richiedere l'attivazione dei sistemi Smart Grid (Peak shaving BESS + Tyrrhenian link).
         """)
 
     if max(t_scen1) > 75.0 and max(t_scen2)<=75.0:
         st.success(f"""
-        🚀 **Risoluzione Smart Grid nello Scenario 2:** Laddove il redispatch tradizionale ha fallito, l'attivazione coordinata dei {sg_threshold} MW di batterie (BESS) a Selargius e il trasferimento di potenza sul **Tyrrhenian Link** tagliano la testa al picco. 
+        🚀 **Risoluzione Smart Grid nello Scenario 2:** Laddove il redispatch tradizionale ha fallito, l'attivazione coordinata dei {sg_threshold} MW di batterie (BESS) e il trasferimento di potenza sul **Tyrrhenian Link** tagliano la testa al picco. 
         La temperatura scende in sicurezza a {max(t_scen2):.1f}°C.
         """)
     
