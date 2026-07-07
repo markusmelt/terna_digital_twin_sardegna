@@ -357,12 +357,20 @@ with tab3:
             delta_color="inverse" if max(t_scen1) > 75 else "normal"
         )
     with kpi3:
-        st.metric(
-            label="Temperatura Max (Peak Shaving BESS + Tyrrhenian link)", 
-            value=f"{max(t_scen2):.1f} °C", 
-            delta=f"-{75.0-max(t_scen2):.1f} °C sotto il limite" if max(t_scen2) < 75 else f"+{max(t_scen2)-75.0:.1f} °C sopra il limite", 
-            delta_color="inverse" if max(t_scen2) > 75 else "off"
-        )
+        if max(t_scen2) > 75.0:
+            st.metric(
+                label="Temperatura Max (Peak Shaving BESS + Tyrrhenian link)", 
+                value=f"{max(t_scen2):.1f} °C", 
+                delta=f"+{max(t_scen2) - 75.0:.1f} °C sopra il limite", 
+                delta_color="inverse"
+            )
+        else:
+            st.metric(
+                label="Temperatura Max (Peak Shaving BESS + Tyrrhenian link)", 
+                value=f"{max(t_scen2):.1f} °C", 
+                delta=f"-{75.0-max(t_scen2):.1f} °C sotto il limite", 
+                delta_color="off"
+            )
 
     st.markdown("---")
     
