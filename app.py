@@ -113,6 +113,74 @@ with tab1:
     totale_netto = sum(potenza_netta)
     autoconsumo_totale = totale_lordo - totale_netto
 
+# 2. KPI Summary Cards in alto
+    kpi1, kpi2, kpi3 = st.columns(3)
+    with kpi1:
+        st.metric(label="Capacità Lorda Totale", value=f"{totale_lordo:,.2f} MW".replace(",", "."))
+    with kpi2:
+        st.metric(label="Capacità Netta Immissibile", value=f"{totale_netto:,.2f} MW".replace(",", "."), delta=f"-{autoconsumo_totale:.2f} MW Servizi Ausiliari", delta_color="inverse")
+    with kpi3:
+        quota_res = ((potenza_netta[0] + potenza_netta[1] + potenza_netta[3]) / totale_netto) * 100
+        st.metric(label="Quota Rinnovabili (sul Netto)", value=f"{quota_res:.1f} %")
+
+    st.markdown("---")
+
+# 3. Creazione dei Grafici Affiancati
+    grafico_col1, grafico_col2 = st.columns(2)
+
+    with grafico_col1:
+        st.subheader("Confronto Potenza Lorda vs Netta")
+        
+        # Grafico a barre raggruppate con Plotly
+        fig_confronto = go.Figure()
+        fig_confronto.add_trace(go.Bar(
+            x=fonti,
+            y=potenza_lorda,
+            name='Potenza Lorda',
+            marker_color='#1f77b4'
+        ))
+        fig_confronto.add_trace(go.Bar(
+            x=fonti,
+            y=potenza_netta,
+            name='Potenza Netta',
+            marker_color='#2ca02c'
+        ))
+
+        fig_confronto.update_layout(
+            barmode='group',
+            xaxis_title="Fonte Energetica",
+            yaxis_title="Potenza [MW]",
+            legend=dict(x=0.7, y=0.95, bgcolor='rgba(255,255,255,0.1)'),
+            margin=dict(l=20, r=20, t=30, b=20),
+            height=400
+        )
+        st.plotly_chart(fig_confronto, use_container_width=True)
+
+    with grafico_col2:
+        st.subheader("Mix Energetico Regionale (Capacità Netta)")
+        
+        # Grafico a torta con Plotly per mostrare le quote percentuali
+        fig_mix = go.Figure(data=[go.Pie(
+            labels=fonti,
+            values=potenza_netta,
+            hole=.3, # Trasforma il grafico a torta in una ciambella (Donut chart), molto moderno
+            textinfo='percent+label',
+            marker=dict(colors=['#4CAF50', '#FFC107', '#FF5722', '#00BCD4', '#9C27B0'])
+        )])
+
+        fig_mix.update_layout(
+            showlegend=False, # Nascondiamo la legenda perché le etichette sono già sul grafico
+            margin=dict(l=20, r=20, t=30, b=20),
+            height=400
+        )
+        st.plotly_chart(fig_mix, use_container_width=True)
+
+    # 4. Nota tecnica di chiusura Tab
+    st.info("""
+    💡 **Evidenza per il Dispacciamento:** Il comparto termoelettrico sardo presenta il più alto tasso di autoconsumo (~220 MW assorbiti dai servizi ausiliari di centrale). 
+    L'integrazione di **61.90 MW netti di Accumuli Stand-alone (+282% anno su anno)** rappresenta l'asset tecnologico chiave gestito dal nodo di Selargius per mitigare l'intermittenza della rampa eolica da 1000 MW simulata nella Sandbox.
+    """)
+
 # ==========================================
 # TAB 2: MAPPA DEGLI ASSET
 # ==========================================
