@@ -28,7 +28,7 @@ percentuale_BESS = (sg_threshold / 61.90) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_BESS:.1f}%** della potenza netta installata in Sardegna.")
 
 st.sidebar.markdown("---")
-st.sidebar.info("""💡 **Info:** Aumentando la produzione eolica il 'Redispatch Semplice' fallisce rendendo obbligatorio l'uso delle tecnologie Smart Grid.""")
+st.sidebar.info("""💡 **Info:** Modifica gli slider per simulare scenari differenti.""")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📱 Link al progetto")
