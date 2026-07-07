@@ -94,12 +94,18 @@ t_scen2 = calcola_temperatura_cavo(p_linea_scen2)
 
 
 # --- INTERFACCIA UTENTE A TAB ---
-tab1, tab2 = st.tabs(["🗺️ Storytelling & Mappa GIS degli Asset", "📊 Sandbox Digital Twin (Grafici Dinamici)"])
+tab1, tab2, tab3 = st.tabs(["⚡Capacità di generazione - Sardegna", "🗺️ Mappa degli Asset", "📊 Simulazioni"])
 
 # ==========================================
-# TAB 1: STORYTELLING E MAPPA GIS
+# TAB 1: CAPACITA' DI GENERAZIONE
 # ==========================================
 with tab1:
+    col1, col2 = st.columns([1, 1])
+
+# ==========================================
+# TAB 2: MAPPA DEGLI ASSET
+# ==========================================
+with tab2:
     col1, col2 = st.columns([1, 1])
     
     with col1:
