@@ -15,16 +15,17 @@ st.markdown("""
 
 # --- SIDEBAR INTERATTIVA (PARAMETRI DI INPUT) ---
 st.sidebar.header("🎛️ Parametri del Simulatore")
-st.sidebar.markdown("Modifica i vincoli fisici e tecnologici per testare la resilienza del sistema elettrico:")
 
-# Slider dinamici per il colloquio
+# Slider dinamici 
 wind_peak = st.sidebar.slider("Picco della Rampa Eolica (MW)", min_value=0, max_value=1200, value=1000, step=50)
 percentuale_eolico = (wind_peak / 1193.20) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_eolico:.1f}%** della potenza netta installata in Sardegna.")
 thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=400, value=150, step=25)
 percentuale_termico = (thermal_min / 2174.92) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_termico:.1f}%** della potenza netta installata in Sardegna.")
-sg_threshold = st.sidebar.slider("Capacità di accumulo BESS (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0)
+sg_threshold = st.sidebar.slider("Capacità di accumulo stand alone (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0)
+percentuale_BESS = (sg_threshold / 61.90) * 100
+st.sidebar.caption(f"💨 Equivale al **{percentuale_BESS:.1f}%** della potenza netta installata in Sardegna.")
 
 st.sidebar.markdown("---")
 st.sidebar.info("""💡 **Info:** Aumentando la produzione eolica il 'Redispatch Semplice' fallisce rendendo obbligatorio l'uso delle tecnologie Smart Grid.""")
