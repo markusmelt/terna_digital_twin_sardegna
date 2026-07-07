@@ -321,7 +321,7 @@ with tab3:
 
     # Linea limite di sicurezza normativa CEI
     fig_dash.add_hline(y=75.0, line_dash="dash", line_color="magenta", line_width=2,
-                        annotation_text="Limite CEI EN 50341 (75°C)", annotation_position="bottom left", row=2, col=1)
+                        annotation_text="Limite CEI EN 50341 (75°C)", annotation_position="top left", row=2, col=1)
 
     # Ottimizzazione del Layout
     fig_dash.update_layout(
