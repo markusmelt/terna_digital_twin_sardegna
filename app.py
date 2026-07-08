@@ -223,7 +223,6 @@ with tab2:
             'Sito': ['Stazione elettrica Selargius', 'Terra Mala (Cagliari)','Fiumetorto (Termini Imerese)', 'Torre Tuscia Magazzeno (Battipaglia)'],
             'Lat': [39.2600, 39.1961085, 37.9725134, 40.569476],
             'Lon': [9.1600, 9.3295586, 13.7556869, 14.8238343],
-            'Tipo': ['Hub di Controllo & Stazione', 'Nodo di Esportazione','Hub di Importazione ed Esportazione','Hub di Importazione ed Esportazione'],
             'Dimensioni': [20, 10, 20, 20]
         }
         df_asset = pd.DataFrame(data_asset)
@@ -260,7 +259,7 @@ with tab2:
                 color=['#d62728', '#d62728', '#d62728','#d62728'],
                 opacity=0.9
             ),
-            text=df_asset['Sito'] + "<br>" + df_asset['Tipo'],
+            text=df_asset['Sito'],
             hoverinfo='text',
             name='Infrastrutture Chiave'
         ))
