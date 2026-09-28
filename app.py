@@ -6,6 +6,13 @@ from plotly.subplots import make_subplots
 import segno
 import io
 
+# Configurazione della pagina Streamlit 
+st.set_page_config(
+    page_title="Digital Twin - Thermal Management Overhead Conductors",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
 # --- INTESTAZIONE PRINCIPALE ---
 st.title("⚡ Digital Twin - Thermal Management Overhead Conductors")
@@ -13,11 +20,14 @@ st.markdown("""
 *Strumento di simulazione interattiva per l'analisi del transitorio termico sulla dorsale elettrica a 380 kV e la valutazione dei meccanismi di flessibilità di rete.*
 """)
 
+# --- AVVISO MOBILE ---
+st.info("📱 **Su mobile:** apri il menu (☰) in alto a sinistra per accedere ai parametri del simulatore.")
+
 # --- SIDEBAR INTERATTIVA (PARAMETRI DI INPUT) ---
 st.sidebar.header("🎛️ Parametri del Simulatore")
 
 # Slider dinamici 
-wind_peak = st.sidebar.slider("Picco della Rampa Eolica (MW)", min_value=0, max_value=1200, value=1000, step=50) # slider eolico
+wind_peak = st.sidebar.slider("Picco della Rampa Eolica (MW)", min_value=0, max_value=1200, value=1000, step=50, help="Picco di produzione eolica al minuto 20") # slider eolico
 percentuale_eolico = (wind_peak / 1193.20) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_eolico:.1f}%** della potenza netta installata.")
 
@@ -31,7 +41,7 @@ st.sidebar.caption(f"💨 Equivale al **{percentuale_termico:.1f}%** della poten
 
 capacita_dorsale = st.sidebar.slider("Capacità di trasporto della dorsale (MW)", min_value=600, max_value=1100, value=800, step=10, help="Soglia oltre la quale il sistema di gestione (BESS + Tyrrhenian Link) interviene per evitare il sovraccarico termico.") # slider capacità trasporto dorsale 380 kV con intervento BESS+Tyrrhenian link
 
-sg_threshold = st.sidebar.slider("Capacità di accumulo stand alone (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0) # slider BESS
+sg_threshold = st.sidebar.slider("Capacità di accumulo stand alone (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0, help="Capacità del comparto BESS") # slider BESS
 percentuale_BESS = (sg_threshold / 61.90) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_BESS:.1f}%** della potenza netta di accumulo.")
 
@@ -58,13 +68,6 @@ qrcode.save(buffer, kind='png', scale=5, dark='#000000', light='#ffffff')
 # Rendering su Streamlit
 st.sidebar.image(buffer.getvalue(), caption="Inquadra per accedere alla web-app", use_container_width=True)
 
-# Configurazione della pagina Streamlit 
-st.set_page_config(
-    page_title="Digital Twin - Thermal Management Overhead Conductors",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 
 # --- MOTORE DI CALCOLO DELLA SIMULAZIONE ---
@@ -85,7 +88,6 @@ thermal_scen1 = np.where(minuti < 20, thermal_nominal, thermal_min)
 p_linea_scen1 = eolico_mw + solare_mw + thermal_scen1
 
 # Scenario 2: Smart Grid (Azione combinata BESS + HVDC Tyrrhenian Link)
-# Al minuto 20 si attivano le batterie che assorbono potenza fino al loro limite di targa (sg_threshold)
 bess_absorption = np.where(minuti < 20, 0, sg_threshold)
 
 # --- BESS: potenza assorbita nei tre scenari ---
@@ -169,48 +171,36 @@ with tab1:
 
     st.markdown("---")
 
-# 3. Creazione dei Grafici e Mappa su Layout a 3 Colonne (Proporzioni 4:4:3)
-    grafico_col1, grafico_col2 = st.columns(2)
+    # Grafici impilati verticalmente (mobile-friendly)
+    st.subheader("Confronto Lordo vs Netta")
+    fig_confronto = go.Figure()
+    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_lorda, name='Lorda', marker_color='#1f77b4'))
+    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_netta, name='Netta', marker_color='#2ca02c'))
+    fig_confronto.update_layout(
+        barmode='group',
+        xaxis_title="Fonte",
+        yaxis_title="Potenza [MW]",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+        margin=dict(l=10, r=10, t=60, b=10),
+        height=420
+    )
+    st.plotly_chart(fig_confronto, use_container_width=True)
 
-    with grafico_col1:
-        st.subheader("Confronto Lordo vs Netta")
-        
-        fig_confronto = go.Figure()
-        fig_confronto.add_trace(go.Bar(
-            x=fonti, y=potenza_lorda, name='Lorda', marker_color='#1f77b4'
-        ))
-        fig_confronto.add_trace(go.Bar(
-            x=fonti, y=potenza_netta, name='Netta', marker_color='#2ca02c'
-        ))
-
-        fig_confronto.update_layout(
-            barmode='group',
-            xaxis_title="Fonte",
-            yaxis_title="Potenza [MW]",
-            legend=dict(x=0.75, y=0.95, bgcolor='rgba(255,255,255,0.1)'),
-            margin=dict(l=10, r=10, t=30, b=10),
-            height=380
-        )
-        st.plotly_chart(fig_confronto, use_container_width=True)
-
-    with grafico_col2:
-        st.subheader("Mix Energetico (Netto)")
-        
-        fig_mix = go.Figure(data=[go.Pie(
-            labels=fonti,
-            values=potenza_netta,
-            hole=.3,
-            textinfo='percent', # Mostra solo la percentuale per non affollare il grafico
-            marker=dict(colors=['#4CAF50', '#FFC107', '#FF5722', '#00BCD4', '#9C27B0'])
-        )])
-
-        fig_mix.update_layout(
-            showlegend=True,
-            legend=dict(orientation="h", y=-0.1, x=0), # Legenda orizzontale sotto il grafico
-            margin=dict(l=10, r=10, t=30, b=10),
-            height=380
-        )
-        st.plotly_chart(fig_mix, use_container_width=True)
+    st.subheader("Mix Energetico (Netto)")
+    fig_mix = go.Figure(data=[go.Pie(
+        labels=fonti,
+        values=potenza_netta,
+        hole=.3,
+        textinfo='percent',
+        marker=dict(colors=['#4CAF50', '#FFC107', '#FF5722', '#00BCD4', '#9C27B0'])
+    )])
+    fig_mix.update_layout(
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.1, x=0),
+        margin=dict(l=10, r=10, t=30, b=10),
+        height=420
+    )
+    st.plotly_chart(fig_mix, use_container_width=True)
 
 
 
@@ -218,93 +208,80 @@ with tab1:
 # TAB 2: Contesto
 # ==========================================
 with tab2:
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        st.subheader("📖 Contesto")
-        st.markdown(f"""
-        La simulazione analizza il comportamento della rete di trasmissione della regione Sardegna durante una giornata caratterizzata dall'arrivo di un repentino fronte meteorologico in concomitanza con il tramonto solare.        
-        * **Lo shock eolico:** Con il tramonto, la produzione fotovoltaica si azzera bruscamente, ma l'arrivo simultaneo di una perturbazione comporta un'accelerazione del vento tale da comportare un picco di produzione eolica di **{wind_peak} MW**.
-        * **Il Vincolo Fisico:** Per garantire la stabilità di tensione e l'inerzia elettrica, le centrali termoelettriche non possono essere spente del tutto ma devono mantenere una generazione minima (**{thermal_min} MW**).
-        * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV in ingresso alla Stazione elettrica di Selargius.
-        * **Il Limite dell'Accumulo Stand Alone:** La Sardegna dispone di un comparto di accumulo stand alone (BESS) che, sebbene in forte crescita, è limitato a una capacità operativa netta di **{sg_threshold} MW**. Davanti a un surplus energetico imprevisto, le batterie reali possono saturare la loro capacità di assorbimento in pochi minuti, risultando da sole insufficienti a contenere la congestione.
-        * **La Soluzione di Rete - il Tyrrhenian Link:** In corrispondenza della stazione elettrica di Selargius, l'energia in eccesso viene governata e deviata sul nuovo elettrodotto sottomarino **HVDC Tyrrhenian Link** per essere esportata verso la Sicilia e la Campania, decongestionando l'isola e garantendo la stabilità della rete elettrica.
-        * **Gestione del surplus energetico:** Il sistema di gestione interviene quando la potenza sulla dorsale supera la soglia di {capacita_dorsale} MW, attivando BESS e Tyrrhenian Link per riportare la temperatura sotto i limiti.
-        """)
-        
-        
+    st.subheader("📖 Contesto")
+    st.markdown(f"""
+    La simulazione analizza il comportamento della rete di trasmissione della Sardegna durante una giornata caratterizzata dall'arrivo di un repentino fronte meteorologico in concomitanza con il tramonto solare.
 
-    with col2:
-        st.subheader("🗺️ Mappa degli asset")
-        
-        # Dizionario Geografico delle infrastrutture coinvolte
-        data_asset = {
-            'Sito': ['Stazione elettrica Selargius', 'Terra Mala (Cagliari)','Fiumetorto (Termini Imerese)', 'Torre Tuscia Magazzeno (Battipaglia)'],
-            'Lat': [39.2600, 39.1961085, 37.9725134, 40.569476],
-            'Lon': [9.1600, 9.3295586, 13.7556869, 14.8238343],
-            'Dimensioni': [20, 10, 20, 20]
-        }
-        df_asset = pd.DataFrame(data_asset)
+    * **Lo shock eolico:** Con il tramonto, la produzione fotovoltaica si azzera bruscamente, ma l'arrivo simultaneo di una perturbazione comporta un'accelerazione del vento tale da generare un picco di produzione eolica di **{wind_peak} MW**.
+    * **Il Vincolo Fisico:** Per garantire la stabilità di tensione e l'inerzia elettrica, le centrali termoelettriche non possono essere spente del tutto ma devono mantenere una generazione minima (**{thermal_min} MW**).
+    * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV in ingresso alla Stazione elettrica di Selargius.
+    * **Il Limite dell'Accumulo Stand Alone:** La Sardegna dispone di un comparto di accumulo stand alone (BESS) limitato a una capacità operativa netta di **{sg_threshold} MW**. Da solo, risulta insufficiente a contenere la congestione.
+    * **La Soluzione di Rete - il Tyrrhenian Link:** In corrispondenza della stazione elettrica di Selargius, l'energia in eccesso viene deviata sul nuovo elettrodotto sottomarino **HVDC Tyrrhenian Link** per essere esportata verso la Sicilia e la Campania.
+    * **Gestione del surplus energetico:** Il sistema di gestione interviene quando la potenza sulla dorsale supera la soglia di **{capacita_dorsale} MW**, attivando BESS e Tyrrhenian Link per riportare la temperatura sotto i limiti.
+    """)
 
-        # Creazione Mappa GIS Interattiva con Plotly Mapbox (Stile Open-Street-Map nativo)
-        fig_map = go.Figure()
+    st.markdown("---")
+    st.subheader("🗺️ Mappa degli asset")
 
-        # Linea 1: Dorsale Nord-Sud 
-        fig_map.add_trace(go.Scattermapbox(
-            lat=[40.8400, 39.2600], lon=[8.3200, 9.1600],
-            mode='lines+markers',
-            line=dict(width=4, color='#ff7f0e'),
-            name='Dorsale Elettrica 380 kV',
-            hoverinfo='text',
-            text='Dorsale Principale di Trasmissione Sarda (Soggetta a Sovraccarico Termico)'
-        ))
-        
-        # Linea 2: Elettrodotto HVDC Tyrrhenian link
-        fig_map.add_trace(go.Scattermapbox(
-            lat=[39.2600, 39.1961085, 37.9725134, 40.569476], lon=[9.1600, 9.3295586, 13.7556869, 14.8238343],
-            mode='lines',
-            line=dict(width=4, color='#2ca02c'), 
-            name='Tyrrhenian Link',
-            hoverinfo='text',
-            text='Collegamento in Corrente Continua'
-        ))
+    data_asset = {
+        'Sito': ['Stazione elettrica Selargius', 'Terra Mala (Cagliari)', 'Fiumetorto (Termini Imerese)', 'Torre Tuscia Magazzeno (Battipaglia)'],
+        'Lat': [39.2600, 39.1961085, 37.9725134, 40.569476],
+        'Lon': [9.1600, 9.3295586, 13.7556869, 14.8238343],
+        'Dimensioni': [20, 10, 20, 20]
+    }
+    df_asset = pd.DataFrame(data_asset)
 
-        # Aggiunta dei nodi puntuali sulla mappa
-        fig_map.add_trace(go.Scattermapbox(
-            lat=df_asset['Lat'], lon=df_asset['Lon'],
-            mode='markers',
-            marker=go.scattermapbox.Marker(
-                size=df_asset['Dimensioni'],
-                color=['#d62728', '#d62728', '#d62728','#d62728'],
-                opacity=0.9
-            ),
-            text=df_asset['Sito'],
-            hoverinfo='text',
-            name='Infrastrutture Chiave'
-        ))
+    fig_map = go.Figure()
 
-        # Impostazioni Layout Mappa (Tema scuro per perfetto contrasto con la legenda)
-        fig_map.update_layout(
-            mapbox=dict(
-                style="open-street-map", # Cambiato in tema scuro nativo
-                center=dict(lat=40.2, lon=10.5),
-                zoom=5.5
-            ),
-            margin=dict(l=0, r=0, t=0, b=0),
-            height=450,
-            showlegend=True,
-            # NUOVA LEGENDA TRASPARENTE: Sfrutta lo sfondo scuro per far risaltare il testo bianco di Streamlit
-            legend=dict(
-                x=0.02,
-                y=0.98,
-                xanchor="left",
-                yanchor="top",
-                bgcolor="rgba(0, 0, 0, 0)", # Completamente trasparente
-                font=dict(color="blue")     
-            )
+    fig_map.add_trace(go.Scattermapbox(
+        lat=[40.8400, 39.2600], lon=[8.3200, 9.1600],
+        mode='lines+markers',
+        line=dict(width=4, color='#ff7f0e'),
+        name='Dorsale Elettrica 380 kV',
+        hoverinfo='text',
+        text='Dorsale Principale di Trasmissione Sarda'
+    ))
+
+    fig_map.add_trace(go.Scattermapbox(
+        lat=[39.2600, 39.1961085, 37.9725134, 40.569476],
+        lon=[9.1600, 9.3295586, 13.7556869, 14.8238343],
+        mode='lines',
+        line=dict(width=4, color='#2ca02c'),
+        name='Tyrrhenian Link',
+        hoverinfo='text',
+        text='Collegamento in Corrente Continua'
+    ))
+
+    fig_map.add_trace(go.Scattermapbox(
+        lat=df_asset['Lat'], lon=df_asset['Lon'],
+        mode='markers',
+        marker=go.scattermapbox.Marker(
+            size=df_asset['Dimensioni'],
+            color=['#d62728', '#d62728', '#d62728', '#d62728'],
+            opacity=0.9
+        ),
+        text=df_asset['Sito'],
+        hoverinfo='text',
+        name='Infrastrutture Chiave'
+    ))
+
+    fig_map.update_layout(
+        mapbox=dict(
+            style="open-street-map",
+            center=dict(lat=40.2, lon=10.5),
+            zoom=5.5
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=500,
+        showlegend=True,
+        legend=dict(
+            x=0.02, y=0.98,
+            xanchor="left", yanchor="top",
+            bgcolor="rgba(0, 0, 0, 0)",
+            font=dict(color="blue")
         )
-        
-        st.plotly_chart(fig_map, use_container_width=True)
+    )
+    st.plotly_chart(fig_map, use_container_width=True)
 
 # ==========================================
 # TAB 3: SIMULAZIONI
@@ -346,12 +323,18 @@ with tab3:
     fig_dash.add_hline(y=85.0, line_dash="dash", line_color="magenta", line_width=2,
                         annotation_text="Limite sicurezza (85°C)", annotation_position="top left", row=2, col=1)
 
-    # Ottimizzazione del Layout
+    # Layout ottimizzato 
     fig_dash.update_layout(
-        margin=dict(t=140, b=40, l=60, r=40),
-        height=900, 
-        template="plotly_white", 
-        legend=dict(orientation="h", yanchor="bottom", y=1.12, xanchor="center", x=0.5)
+        margin=dict(t=80, b=140, l=60, r=40),
+        height=1100,
+        template="plotly_white",
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=-0.12,
+            xanchor="center",
+            x=0.5
+        )
     )
 
     fig_dash.update_xaxes(title_text="Tempo (Minuti)", row=3, col=1)
@@ -360,43 +343,37 @@ with tab3:
     fig_dash.update_yaxes(title_text="Potenza [MW]", row=3, col=1)
 
 
-
     # Rendering del grafico interattivo all'interno di Streamlit
     st.plotly_chart(fig_dash, use_container_width=True)
     
-    # Sottoregistro dei dati di sintesi dinamici sotto il grafico
+    # KPI
     st.markdown("### 📋 Temperatura Max del Conduttore:")
-    kpi1, kpi2, kpi3 = st.columns(3)
-    
-    with kpi1:
+    st.metric(
+        label="Termico Rigido",
+        value=f"{max(t_scen0):.1f} °C",
+        delta=f"+{max(t_scen0)-85.0:.1f} °C sopra il limite" if max(t_scen0) > 85 else "Sicuro",
+        delta_color="inverse" if max(t_scen0) > 85 else "normal"
+    )
+    st.metric(
+        label="Termico al minimo tecnico",
+        value=f"{max(t_scen1):.1f} °C",
+        delta=f"+{max(t_scen1)-85.0:.1f} °C sopra il limite" if max(t_scen1) > 85 else "Sicuro",
+        delta_color="inverse" if max(t_scen1) > 85 else "normal"
+    )
+    if max(t_scen2) > 85.0:
         st.metric(
-            label="Termico Rigido", 
-            value=f"{max(t_scen0):.1f} °C", 
-            delta=f"+{max(t_scen0)-85.0:.1f} °C sopra il limite" if max(t_scen0) > 85 else "Sicuro", 
-            delta_color="inverse" if max(t_scen0) > 85 else "normal"
+            label="BESS + Tyrrhenian Link",
+            value=f"{max(t_scen2):.1f} °C",
+            delta=f"+{max(t_scen2) - 85.0:.1f} °C sopra il limite",
+            delta_color="inverse"
         )
-    with kpi2:
+    else:
         st.metric(
-            label="Termico al minimo tecnico", 
-            value=f"{max(t_scen1):.1f} °C", 
-            delta=f"+{max(t_scen1)-85.0:.1f} °C sopra il limite" if max(t_scen1) > 85 else "Sicuro",
-            delta_color="inverse" if max(t_scen1) > 85 else "normal"
+            label="BESS + Tyrrhenian Link",
+            value=f"{max(t_scen2):.1f} °C",
+            delta=f"-{85.0 - max(t_scen2):.1f} °C sotto il limite",
+            delta_color="off"
         )
-    with kpi3:
-        if max(t_scen2) > 85.0:
-            st.metric(
-                label="BESS + Tyrrhenian link", 
-                value=f"{max(t_scen2):.1f} °C", 
-                delta=f"+{max(t_scen2) - 85.0:.1f} °C sopra il limite", 
-                delta_color="inverse"
-            )
-        else:
-            st.metric(
-                label="BESS + Tyrrhenian link", 
-                value=f"{max(t_scen2):.1f} °C", 
-                delta=f"-{85.0-max(t_scen2):.1f} °C sotto il limite", 
-                delta_color="off"
-            )
 
     st.markdown("---")
     
