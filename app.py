@@ -25,9 +25,11 @@ thermal_nominal = st.sidebar.slider("Potenza Termica Nominale Iniziale (MW)", mi
 percentuale_nominal = (thermal_nominal / 2174.92) * 100
 st.sidebar.caption(f"🏭 Equivale al **{percentuale_nominal:.1f}%** della potenza netta termica.")
 
-thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=int(thermal_nominal), value=150, step=25, help="Il limite inferiore a cui la centrale può scendere durante il redispatching.") # slider minimo tecnico centrali termiche
+thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=int(thermal_nominal), value=0.1*max_value, step=25, help="Il limite inferiore a cui la centrale può scendere durante il redispatching.") # slider minimo tecnico centrali termiche
 percentuale_termico = (thermal_min / 2174.92) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_termico:.1f}%** della potenza netta termica.")
+
+capacita_dorsale = st.sidebar.slider("Capacità di trasporto della dorsale (MW)", min_value=600, max_value=1100, value=800, step=10, help="Soglia oltre la quale il sistema di gestione (BESS + Tyrrhenian Link) interviene per evitare il sovraccarico termico.") # slider capacità trasporto dorsale 380 kV con intervento BESS+Tyrrhenian link
 
 sg_threshold = st.sidebar.slider("Capacità di accumulo stand alone (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0) # slider BESS
 percentuale_BESS = (sg_threshold / 61.90) * 100
@@ -230,6 +232,7 @@ with tab2:
         * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV in ingresso alla Stazione elettrica di Selargius.
         * **Il Limite dell'Accumulo Stand Alone:** La Sardegna dispone di un comparto di accumulo stand alone (BESS) che, sebbene in forte crescita, è limitato a una capacità operativa netta di **{sg_threshold} MW**. Davanti a un surplus energetico imprevisto, le batterie reali possono saturare la loro capacità di assorbimento in pochi minuti, risultando da sole insufficienti a contenere la congestione.
         * **La Soluzione di Rete - il Tyrrhenian Link:** In corrispondenza della stazione elettrica di Selargius, l'energia in eccesso viene governata e deviata sul nuovo elettrodotto sottomarino **HVDC Tyrrhenian Link** per essere esportata verso la Sicilia e la Campania, decongestionando l'isola e garantendo la stabilità della rete elettrica.
+        * **Gestione del surplus energetico:** Il sistema di gestione interviene quando la potenza sulla dorsale supera la soglia di {capacita_dorsale} MW, attivando BESS e Tyrrhenian Link per riportare la temperatura sotto i limiti.
         """)
         
         
