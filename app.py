@@ -25,7 +25,7 @@ thermal_nominal = st.sidebar.slider("Potenza Termica Nominale Iniziale (MW)", mi
 percentuale_nominal = (thermal_nominal / 2174.92) * 100
 st.sidebar.caption(f"🏭 Equivale al **{percentuale_nominal:.1f}%** della potenza netta termica.")
 
-thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=int(thermal_nominal), value=0.1*max_value, step=25, help="Il limite inferiore a cui la centrale può scendere durante il redispatching.") # slider minimo tecnico centrali termiche
+thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=int(thermal_nominal), value=0.1*int(thermal_nominal), step=25, help="Il limite inferiore a cui la centrale può scendere durante il redispatching.") # slider minimo tecnico centrali termiche
 percentuale_termico = (thermal_min / 2174.92) * 100
 st.sidebar.caption(f"💨 Equivale al **{percentuale_termico:.1f}%** della potenza netta termica.")
 
