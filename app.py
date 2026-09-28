@@ -424,7 +424,7 @@ with tab4:
     st.latex(r"q_c + q_r + m C_p \frac{dT_c}{dt} = q_s + I^2 R(T_c)")
     st.markdown("""
     - **Semplificazioni introdotte:**
-        1. **Termine solare nullo:** \( q_s = 0 \), poiché lo scenario simulato è notturno (tramonto).
+        1. **Termine solare nullo:**  $q_s = 0$, poiché lo scenario simulato è notturno (tramonto).
         2. **Linearizzazione di convezione e radiazione:** \( q_c + q_r \approx h_{\text{eff}} (T_c - T_a) \), con \( h_{\text{eff}} \) coefficiente di scambio termico globale.
         3. **Resistenza costante:** \( R(T_c) \approx R \).
     - **Equazione risultante (modello del primo ordine):**
