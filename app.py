@@ -444,16 +444,16 @@ with tab4:
     st.markdown("I valori utilizzati nel modello sono riportati nella tabella seguente.")
 
     parametri = {
-        "Parametro": ["Tensione concatenata $V_(LL)$", "Fattore di potenza $\\cos(\\phi)$", 
-                      "Corrente nominale $I_(max)$", "Sovratemperatura a pieno carico $\\Delta T_max$",
+        "Parametro": ["Tensione concatenata $V_{LL}$", "Fattore di potenza $\\cos(\\phi)$", 
+                      "Corrente nominale $I_{max}$", "Sovratemperatura a pieno carico $\\Delta T_{max}$",
                       "Costante di tempo $\\tau$", "Temperatura ambiente $T_a$",
                       "Passo di integrazione $\\Delta t$"],
         "Valore": ["380 kV", "0.9", "1600 A", "60 °C", "20 min", "25 °C (default)", "1 min"],
         "Fonte / Note": ["Tensione standard AT", "Valore tipico per linee di trasmissione", 
-                         "Dato di progetto per conduttori binati", 
-                         "Calcolato come \( T_{c,\\max} - T_a = 85 - 25 \)", 
-                         "IEEE 738, CIGRE TB 601", "Temperatura ambiente standard di progetto", 
-                         "Scelto per stabilità di Eulero"]
+                         "Dato di progetto per conduttori binati ACSR", 
+                         "Calcolato come $T_{c,\\max} - T_a = 85 - 25$", 
+                         "letteratura", "Temperatura ambiente standard di progetto", 
+                         "Metodo di Eulero"]
     }
     st.table(parametri)
 
@@ -478,7 +478,7 @@ with tab4:
     - **Scenario 1 (Termico al Minimo):** il termico scende al minimo tecnico al minuto 20.
     - **Scenario 2 (BESS + Tyrrhenian Link):** il termico è già al minimo; BESS e Link si attivano al minuto 20 per gestire il surplus.
     - **Dati meteo:** rampa eolica al minuto 20, solare che si azzera al tramonto.
-    - **Rumore:** aggiunto rumore gaussiano su eolico (\( \\sigma=10 \) MW), solare (\( \\sigma=2 \) MW) e temperatura (\( \\sigma=0.02 \) °C) per simulare fluttuazioni reali.
+    - **Rumore:** aggiunto rumore gaussiano su eolico ($\\sigma=10$ MW), solare ($\\sigma=2$ MW) e temperatura ($\\sigma=0.02$ °C) per simulare fluttuazioni reali.
     """)
 
     st.markdown("---")
@@ -488,7 +488,7 @@ with tab4:
     st.markdown("""
     - Non include **vento**, **radiazione solare**, **altitudine** e **variazione di R con T**.
     - La **linearizzazione** di convezione e radiazione è valida solo nell'intorno del punto di calibrazione (85 °C).
-    - Il modello è **del primo ordine**, non un **DLR completo**.
+    - Il modello è **del primo ordine**.
     - La capacità della dorsale è una **soglia di attivazione** del sistema di gestione, non un limite fisico assoluto.
     """)
 
