@@ -12,4 +12,4 @@ jobs:
     steps:
       - name: Ping Streamlit App
         run: |
-          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://ternadigitaltwinsardegna-8qhaxkm4racpwab2w3xxvr.streamlit.app/
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://dt-overheadconductors.streamlit.app/
