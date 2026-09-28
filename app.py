@@ -86,12 +86,8 @@ p_linea_scen1 = eolico_mw + solare_mw + thermal_scen1
 # Al minuto 20 si attivano le batterie che assorbono potenza fino al loro limite di targa (sg_threshold)
 bess_absorption = np.where(minuti < 20, 0, sg_threshold)
 
-# La potenza residua sulla linea viene alleggerita dall'assorbimento BESS. 
-# Il rimanente surplus viene preso in carico dall'HVDC verso il continente.
-p_linea_scen2 = np.clip(p_linea_scen1 - bess_absorption, 0, None)
-
 # --- CAPACITÀ DI TRASPORTO DELLA DORSALE ---
-capacita_dorsale = 947.0  # MW (soglia oltre la quale interviene il Link)
+capacita_dorsale = 800.0  # MW (soglia oltre la quale interviene il Link)
 
 # --- BESS: potenza assorbita nei tre scenari ---
 p_bess_scen0 = np.zeros_like(minuti)
@@ -109,6 +105,9 @@ p_link_scen1 = np.zeros_like(minuti)
 # dopo l'assorbimento del BESS, fino a un massimo di 1000 MW
 surplus_da_esportare = np.clip(p_linea_scen1 - capacita_dorsale - p_bess_scen2, 0, None)
 p_link_scen2 = np.clip(surplus_da_esportare, 0, 1000.0)
+
+# La potenza effettiva sulla dorsale viene alleggerita dall'assorbimento BESS e il rimanente surplus viene preso in carico dall'HVDC verso il continente.
+p_linea_scen2 = np.clip(p_linea_scen1 - bess_absorption - p_link_scen2, 0, None)
 
 # Modello Dinamico 
 def calcola_temperatura_cavo(potenza_mw_vettore, T_ambient):
