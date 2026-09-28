@@ -423,17 +423,18 @@ with tab4:
     """)
     st.latex(r"q_c + q_r + m C_p \frac{dT_c}{dt} = q_s + I^2 R(T_c)")
     st.markdown("""
-    - **Semplificazioni introdotte:**
-        1. **Termine solare nullo:**  $q_s = 0$, poiché lo scenario simulato è notturno (tramonto).
-        2. **Linearizzazione di convezione e radiazione:** \( q_c + q_r \approx h_{\text{eff}} (T_c - T_a) \), con \( h_{\text{eff}} \) coefficiente di scambio termico globale.
-        3. **Resistenza costante:** \( R(T_c) \approx R \).
-    - **Equazione risultante (modello del primo ordine):**
+    1. **Termine solare nullo**: $q_s = 0$, poiché lo scenario simulato è notturno (tramonto + picco eolico).
+    2. **Linearizzazione di convezione e radiazione**: $q_c + q_r \\approx h_{eff} \\,(T_c - T_a)$, 
+       con $h_{eff}$ coefficiente di scambio termico globale.
+    3. **Resistenza costante**: $R(T_c) \\approx R$.
     """)
+
+    st.markdown("**Equazione risultante (modello del primo ordine):**")
     st.latex(r"\tau \frac{dT_c}{dt} + T_c = T_{\text{target}}")
     st.markdown("""
     con:
-    - \( \\tau = \\frac{m C_p}{h_{\\text{eff}}} \) = costante di tempo termica
-    - \( T_{\\text{target}} = T_a + \\left( \\frac{I}{I_{\\max}} \\right)^2 \\Delta T_{\\max} \)
+    - $\\tau = m C_p / h_{eff}$ → costante di tempo termica
+    - $T_{target} = T_a + \\left( I / I_{max} \\right)^2 \\Delta T_{max}$
     """)
 
     st.markdown("---")
