@@ -88,9 +88,6 @@ p_linea_scen1 = eolico_mw + solare_mw + thermal_scen1
 # Al minuto 20 si attivano le batterie che assorbono potenza fino al loro limite di targa (sg_threshold)
 bess_absorption = np.where(minuti < 20, 0, sg_threshold)
 
-# --- CAPACITÀ DI TRASPORTO DELLA DORSALE ---
-capacita_dorsale = 800.0  # MW (soglia oltre la quale interviene il Link)
-
 # --- BESS: potenza assorbita nei tre scenari ---
 p_bess_scen0 = np.zeros_like(minuti)
 p_bess_scen1 = np.zeros_like(minuti)
