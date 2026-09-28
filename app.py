@@ -338,8 +338,8 @@ with tab3:
     fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen2, name="Temp - BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3.5), showlegend=False), row=2, col=1)
 
     # --- GRAFICO 3: BESS + TYRRHENIAN LINK ---
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_bess_scen2, name="BESS (assorbimento)", line=dict(color='#1f77b4', width=2), row=3, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_link_scen2, name="Tyrrhenian Link (esportazione)", line=dict(color='#2ca02c', width=2), row=3, col=1)
+    fig_dash.add_trace(go.Scatter(x=minuti, y=p_bess_scen2, name="BESS (assorbimento)", line=dict(color='#1f77b4', width=2)), row=3, col=1)
+    fig_dash.add_trace(go.Scatter(x=minuti, y=p_link_scen2, name="Tyrrhenian Link (esportazione)", line=dict(color='#2ca02c', width=2)), row=3, col=1)
 
     
     # Linea limite di sicurezza (da letteratura)
