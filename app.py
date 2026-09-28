@@ -310,12 +310,12 @@ with tab3:
     # --- GRAFICO 1: FLUSSI DI POTENZA ---
     fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen0, name="Termico Rigido", line=dict(color='#E30613', width=2, dash='dot')), row=1, col=1)
     fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen1, name="Termico al Minimo", line=dict(color='#ff7f0e', width=2)), row=1, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen2, name="Intervento BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3)), row=1, col=1)
+    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen2, name="BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3)), row=1, col=1)
 
     # --- GRAFICO 2: TEMPERATURE CAVO ---
     fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen0, name="Temp - Termico Rigido", line=dict(color='#E30613', width=2, dash='dot'), showlegend=False), row=2, col=1)
     fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen1, name="Temp - Termico al Minimo", line=dict(color='#ff7f0e', width=2), showlegend=False), row=2, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen2, name="Temp - Intervento BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3.5), showlegend=False), row=2, col=1)
+    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen2, name="Temp - BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3.5), showlegend=False), row=2, col=1)
 
     # Linea limite di sicurezza (da letteratura)
     fig_dash.add_hline(y=85.0, line_dash="dash", line_color="magenta", line_width=2,
