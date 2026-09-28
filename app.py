@@ -351,10 +351,10 @@ with tab3:
 
     # Ottimizzazione del Layout
     fig_dash.update_layout(
-        margin=dict(t=60, b=40, l=60, r=40),
+        margin=dict(t=140, b=40, l=60, r=40),
         height=900, 
         template="plotly_white", 
-        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
+        legend=dict(orientation="h", yanchor="bottom", y=1.12, xanchor="center", x=0.5)
     )
 
     fig_dash.update_xaxes(title_text="Tempo (Minuti)", row=3, col=1)
