@@ -56,7 +56,7 @@ st.sidebar.info("""💡 **Info:** Modifica gli slider per simulare scenari diffe
 st.sidebar.markdown("---")
 st.sidebar.subheader("📱 Link al progetto")
 
-url_progetto = "https://ternadigitaltwinsardegna-8qhaxkm4racpwab2w3xxvr.streamlit.app/"
+url_progetto = "https://dt-overheadconductors.streamlit.app/"
 
 # Genera il QR Code in memoria
 qrcode = segno.make_qr(url_progetto)
