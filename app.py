@@ -444,7 +444,7 @@ with tab4:
     st.markdown("I valori utilizzati nel modello sono riportati nella tabella seguente.")
 
     parametri = {
-        "Parametro": ["Tensione concatenata $V_{LL}$", "Fattore di potenza $\\cos(\\phi)$", 
+        "Parametro": ["Tensione concatenata $V$", "Fattore di potenza $\\cos(\\phi)$", 
                       "Corrente nominale $I_{max}$", "Sovratemperatura a pieno carico $\\Delta T_{max}$",
                       "Costante di tempo $\\tau$", "Temperatura ambiente $T_a$",
                       "Passo di integrazione $\\Delta t$"],
