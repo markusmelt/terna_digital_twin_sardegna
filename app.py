@@ -140,7 +140,7 @@ t_scen2 = calcola_temperatura_cavo(p_linea_scen2, t_ambient)
 
 
 # --- INTERFACCIA UTENTE A TAB ---
-tab1, tab2, tab3 = st.tabs(["⚡Capacità di generazione - Sardegna", "🗺️ Contesto", "📊 Simulazioni"])
+tab1, tab2, tab3, tab4 = st.tabs(["⚡Capacità di generazione - Sardegna", "🗺️ Contesto", "📊 Simulazioni", "📋 Assunzioni e Ipotesi"])
 
 # ==========================================
 # TAB 1: CAPACITA' DI GENERAZIONE
@@ -403,5 +403,100 @@ with tab3:
 
     st.markdown("---")
     
-    
+# ==========================================
+# TAB 4: ASSUNZIONI E IPOTESI
+# ==========================================
+with tab4:
+    st.header("📋 Assunzioni e Ipotesi del Modello")
+    st.markdown("""
+    In questo tab sono riportate le assunzioni, i parametri di calibrazione e i limiti del modello utilizzato.
+    """)
+
+    st.markdown("---")
+
+    # --- SEZIONE 1: MODELLO TERMICO ---
+    st.subheader("1. Modello Termico")
+    st.markdown("""
+    Il modello si basa sull'equazione del bilancio termico transitorio di un conduttore aereo, con le seguenti semplificazioni:
+
+    - **Equazione completa di partenza:**
+    """)
+    st.latex(r"q_c + q_r + m C_p \frac{dT_c}{dt} = q_s + I^2 R(T_c)")
+    st.markdown("""
+    - **Semplificazioni introdotte:**
+        1. **Termine solare nullo:** \( q_s = 0 \), poiché lo scenario simulato è notturno (tramonto).
+        2. **Linearizzazione di convezione e radiazione:** \( q_c + q_r \approx h_{\text{eff}} (T_c - T_a) \), con \( h_{\text{eff}} \) coefficiente di scambio termico globale.
+        3. **Resistenza costante:** \( R(T_c) \approx R \).
+    - **Equazione risultante (modello del primo ordine):**
+    """)
+    st.latex(r"\tau \frac{dT_c}{dt} + T_c = T_{\text{target}}")
+    st.markdown("""
+    con:
+    - \( \\tau = \\frac{m C_p}{h_{\\text{eff}}} \) = costante di tempo termica
+    - \( T_{\\text{target}} = T_a + \\left( \\frac{I}{I_{\\max}} \\right)^2 \\Delta T_{\\max} \)
+    """)
+
+    st.markdown("---")
+
+    # --- SEZIONE 2: PARAMETRI DI CALIBRAZIONE ---
+    st.subheader("2. Parametri di Calibrazione")
+    st.markdown("I valori utilizzati nel modello sono riportati nella tabella seguente.")
+
+    parametri = {
+        "Parametro": ["Tensione concatenata \( V_{LL} \)", "Fattore di potenza \( \\cos\\varphi \)", 
+                      "Corrente nominale \( I_{\\max} \)", "Sovratemperatura a pieno carico \( \\Delta T_{\\max} \)",
+                      "Costante di tempo \( \\tau \)", "Temperatura ambiente \( T_a \)",
+                      "Passo di integrazione \( \\Delta t \)"],
+        "Valore": ["380 kV", "0.9", "1600 A", "60 °C", "20 min", "25 °C (default)", "1 min"],
+        "Fonte / Note": ["Tensione standard AT", "Valore tipico per linee di trasmissione", 
+                         "Dato di progetto per conduttori binati", 
+                         "Calcolato come \( T_{c,\\max} - T_a = 85 - 25 \)", 
+                         "IEEE 738, CIGRE TB 601", "Temperatura ambiente standard di progetto", 
+                         "Scelto per stabilità di Eulero"]
+    }
+    st.table(parametri)
+
+    st.markdown("---")
+
+    # --- SEZIONE 3: VINCOLI DI RETE ---
+    st.subheader("3. Vincoli di Rete")
+    st.markdown("""
+    I seguenti vincoli sono stati imposti nel modello per riflettere la realtà operativa del sistema elettrico della regione Sardegna:
+    - **Minimo tecnico termico:** 225 MW (vincolo fisico per garantire inerzia e stabilità di rete).
+    - **Capacità di trasporto della dorsale:** 800 MW (soglia oltre la quale il sistema di gestione interviene).
+    - **Capacità BESS:** 61.9 MW (dato dalla dashboard Terna).
+    - **Capacità Tyrrhenian Link:** 1000 MW per tratta (dato di progetto).
+    """)
+
+    st.markdown("---")
+
+    # --- SEZIONE 4: IPOTESI SUGLI SCENARI ---
+    st.subheader("4. Ipotesi sugli Scenari")
+    st.markdown("""
+    - **Scenario 0 (Termico Rigido):** il termico resta al valore nominale, nessun intervento correttivo.
+    - **Scenario 1 (Termico al Minimo):** il termico scende al minimo tecnico al minuto 20.
+    - **Scenario 2 (BESS + Tyrrhenian Link):** il termico è già al minimo; BESS e Link si attivano al minuto 20 per gestire il surplus.
+    - **Dati meteo:** rampa eolica al minuto 20, solare che si azzera al tramonto.
+    - **Rumore:** aggiunto rumore gaussiano su eolico (\( \\sigma=10 \) MW), solare (\( \\sigma=2 \) MW) e temperatura (\( \\sigma=0.02 \) °C) per simulare fluttuazioni reali.
+    """)
+
+    st.markdown("---")
+
+    # --- SEZIONE 5: LIMITI DEL MODELLO ---
+    st.subheader("5. Limiti del Modello")
+    st.markdown("""
+    - Non include **vento**, **radiazione solare**, **altitudine** e **variazione di R con T**.
+    - La **linearizzazione** di convezione e radiazione è valida solo nell'intorno del punto di calibrazione (85 °C).
+    - Il modello è **del primo ordine**, non un **DLR completo**.
+    - La capacità della dorsale è una **soglia di attivazione** del sistema di gestione, non un limite fisico assoluto.
+    """)
+
+    st.markdown("---")
+
+    # --- SEZIONE 6: DISCLAIMER ---
+    st.subheader("6. Disclaimer")
+    st.info("""
+    Questo PoC è uno strumento dimostrativo. Non è affiliato a Terna S.p.A. 
+    I dati utilizzati provengono da fonti pubbliche (Terna, IEEE 738, letteratura tecnica). 
+    """)
 
