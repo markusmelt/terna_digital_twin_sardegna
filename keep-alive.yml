@@ -1,0 +1,15 @@
+name: Keep Streamlit App Alive
+
+on:
+  schedule:
+    # Ogni 8 ore (00:00, 08:00, 16:00 UTC)
+    - cron: '0 */8 * * *'
+  workflow_dispatch:  # permette avvio manuale
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Streamlit App
+        run: |
+          curl -s -o /dev/null -w "HTTP Status: %{http_code}\n" https://ternadigitaltwinsardegna-8qhaxkm4racpwab2w3xxvr.streamlit.app/
