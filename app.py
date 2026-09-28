@@ -139,154 +139,12 @@ t_scen2 = calcola_temperatura_cavo(p_linea_scen2, t_ambient)
 
 
 # --- INTERFACCIA UTENTE A TAB ---
-tab1, tab2, tab3, tab4 = st.tabs(["⚡Capacità di generazione - Sardegna", "🗺️ Contesto", "📊 Simulazioni", "📋 Assunzioni e Ipotesi"])
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Simulazioni", "📋 Assunzioni e Ipotesi", "⚡Capacità di generazione - Sardegna", "🗺️ Contesto"])
 
 # ==========================================
-# TAB 1: CAPACITA' DI GENERAZIONE
+# TAB 1: SIMULAZIONI
 # ==========================================
 with tab1:
-    #st.subheader("📊 Capacità di Generazione Regionale (Sardegna)")
-    st.markdown("""
-    Analisi della **Potenza Efficiente Lorda e Netta**.""") # I dati evidenziano il divario di autoconsumo delle centrali termoelettriche e la crescente quota di accumuli stand-alone
-
-# 1. Definizione dei Dati Reali estratti dalla Dashboard Terna
-    fonti = ['Eolico', 'Fotovoltaico', 'Termoelettrico', 'Idrico', 'Accumulo Stand-alone']
-    potenza_lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
-    potenza_netta = [1193.20, 1722.09, 2174.92, 463.42, 61.90]
-    
-    totale_lordo = sum(potenza_lorda)
-    totale_netto = sum(potenza_netta)
-    autoconsumo_totale = totale_lordo - totale_netto
-
-# 2. KPI Summary Cards in alto
-    kpi1, kpi2, kpi3 = st.columns(3)
-  
-    with kpi1:
-        st.metric(label="Capacità Lorda Totale", value=f"{totale_lordo:,.2f} MW".replace(",", "."))
-    with kpi2:
-        st.metric(label="Capacità Netta Immissibile", value=f"{totale_netto:,.2f} MW".replace(",", "."), delta=f"-{autoconsumo_totale:.2f} MW Servizi Ausiliari", delta_color="inverse")
-    with kpi3:
-        quota_res = ((potenza_netta[0] + potenza_netta[1] + potenza_netta[3]) / totale_netto) * 100
-        st.metric(label="Quota Rinnovabili (sul Netto)", value=f"{quota_res:.1f} %")
-
-    st.markdown("---")
-
-    # Grafici impilati verticalmente (mobile-friendly)
-    st.subheader("Confronto Lordo vs Netta")
-    fig_confronto = go.Figure()
-    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_lorda, name='Lorda', marker_color='#1f77b4'))
-    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_netta, name='Netta', marker_color='#2ca02c'))
-    fig_confronto.update_layout(
-        barmode='group',
-        xaxis_title="Fonte",
-        yaxis_title="Potenza [MW]",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-        margin=dict(l=10, r=10, t=60, b=10),
-        height=420
-    )
-    st.plotly_chart(fig_confronto, use_container_width=True)
-
-    st.subheader("Mix Energetico (Netto)")
-    fig_mix = go.Figure(data=[go.Pie(
-        labels=fonti,
-        values=potenza_netta,
-        hole=.3,
-        textinfo='percent',
-        marker=dict(colors=['#4CAF50', '#FFC107', '#FF5722', '#00BCD4', '#9C27B0'])
-    )])
-    fig_mix.update_layout(
-        showlegend=True,
-        legend=dict(orientation="h", y=-0.1, x=0),
-        margin=dict(l=10, r=10, t=30, b=10),
-        height=420
-    )
-    st.plotly_chart(fig_mix, use_container_width=True)
-
-
-
-# ==========================================
-# TAB 2: Contesto
-# ==========================================
-with tab2:
-    st.subheader("📖 Contesto")
-    st.markdown(f"""
-    La simulazione analizza il comportamento della rete di trasmissione della Sardegna durante una giornata caratterizzata dall'arrivo di un repentino fronte meteorologico in concomitanza con il tramonto solare.
-
-    * **Lo shock eolico:** Con il tramonto, la produzione fotovoltaica si azzera bruscamente, ma l'arrivo simultaneo di una perturbazione comporta un'accelerazione del vento tale da generare un picco di produzione eolica di **{wind_peak} MW**.
-    * **Il Vincolo Fisico:** Per garantire la stabilità di tensione e l'inerzia elettrica, le centrali termoelettriche non possono essere spente del tutto ma devono mantenere una generazione minima (**{thermal_min} MW**).
-    * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV in ingresso alla Stazione elettrica di Selargius.
-    * **Il Limite dell'Accumulo Stand Alone:** La Sardegna dispone di un comparto di accumulo stand alone (BESS) limitato a una capacità operativa netta di **{sg_threshold} MW**. Da solo, risulta insufficiente a contenere la congestione.
-    * **La Soluzione di Rete - il Tyrrhenian Link:** In corrispondenza della stazione elettrica di Selargius, l'energia in eccesso viene deviata sul nuovo elettrodotto sottomarino **HVDC Tyrrhenian Link** per essere esportata verso la Sicilia e la Campania.
-    * **Gestione del surplus energetico:** Il sistema di gestione interviene quando la potenza sulla dorsale supera la soglia di **{capacita_dorsale} MW**, attivando BESS e Tyrrhenian Link per riportare la temperatura sotto i limiti.
-    """)
-
-    st.markdown("---")
-    st.subheader("🗺️ Mappa degli asset")
-
-    data_asset = {
-        'Sito': ['Stazione elettrica Selargius', 'Terra Mala (Cagliari)', 'Fiumetorto (Termini Imerese)', 'Torre Tuscia Magazzeno (Battipaglia)'],
-        'Lat': [39.2600, 39.1961085, 37.9725134, 40.569476],
-        'Lon': [9.1600, 9.3295586, 13.7556869, 14.8238343],
-        'Dimensioni': [20, 10, 20, 20]
-    }
-    df_asset = pd.DataFrame(data_asset)
-
-    fig_map = go.Figure()
-
-    fig_map.add_trace(go.Scattermapbox(
-        lat=[40.8400, 39.2600], lon=[8.3200, 9.1600],
-        mode='lines+markers',
-        line=dict(width=4, color='#ff7f0e'),
-        name='Dorsale Elettrica 380 kV',
-        hoverinfo='text',
-        text='Dorsale Principale di Trasmissione Sarda'
-    ))
-
-    fig_map.add_trace(go.Scattermapbox(
-        lat=[39.2600, 39.1961085, 37.9725134, 40.569476],
-        lon=[9.1600, 9.3295586, 13.7556869, 14.8238343],
-        mode='lines',
-        line=dict(width=4, color='#2ca02c'),
-        name='Tyrrhenian Link',
-        hoverinfo='text',
-        text='Collegamento in Corrente Continua'
-    ))
-
-    fig_map.add_trace(go.Scattermapbox(
-        lat=df_asset['Lat'], lon=df_asset['Lon'],
-        mode='markers',
-        marker=go.scattermapbox.Marker(
-            size=df_asset['Dimensioni'],
-            color=['#d62728', '#d62728', '#d62728', '#d62728'],
-            opacity=0.9
-        ),
-        text=df_asset['Sito'],
-        hoverinfo='text',
-        name='Infrastrutture Chiave'
-    ))
-
-    fig_map.update_layout(
-        mapbox=dict(
-            style="open-street-map",
-            center=dict(lat=40.2, lon=10.5),
-            zoom=5.5
-        ),
-        margin=dict(l=0, r=0, t=0, b=0),
-        height=500,
-        showlegend=True,
-        legend=dict(
-            x=0.02, y=0.98,
-            xanchor="left", yanchor="top",
-            bgcolor="rgba(0, 0, 0, 0)",
-            font=dict(color="blue")
-        )
-    )
-    st.plotly_chart(fig_map, use_container_width=True)
-
-# ==========================================
-# TAB 3: SIMULAZIONI
-# ==========================================
-with tab3:
     st.subheader("📊 Analisi Comparativa degli Scenari Operativi")
     st.markdown("""
     Visualizzazione dei flussi di potenza sulla dorsale interna a 380 kV e del profilo termico del conduttore. 
@@ -378,9 +236,9 @@ with tab3:
     st.markdown("---")
     
 # ==========================================
-# TAB 4: ASSUNZIONI E IPOTESI
+# TAB 2: ASSUNZIONI E IPOTESI
 # ==========================================
-with tab4:
+with tab2:
     st.header("📋 Assunzioni e Ipotesi del Modello")
     st.markdown("""
     In questo tab sono riportate le assunzioni, i parametri di calibrazione e i limiti del modello utilizzato.
@@ -474,4 +332,149 @@ with tab4:
     Questo PoC è uno strumento dimostrativo. Non è affiliato a Terna S.p.A. 
     I dati utilizzati provengono da fonti pubbliche (Terna, IEEE 738, letteratura tecnica). 
     """)
+
+
+# ==========================================
+# TAB 3: CAPACITA' DI GENERAZIONE
+# ==========================================
+with tab3:
+    #st.subheader("📊 Capacità di Generazione Regionale (Sardegna)")
+    st.markdown("""
+    Analisi della **Potenza Efficiente Lorda e Netta**.""") # I dati evidenziano il divario di autoconsumo delle centrali termoelettriche e la crescente quota di accumuli stand-alone
+
+# 1. Definizione dei Dati Reali estratti dalla Dashboard Terna
+    fonti = ['Eolico', 'Fotovoltaico', 'Termoelettrico', 'Idrico', 'Accumulo Stand-alone']
+    potenza_lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
+    potenza_netta = [1193.20, 1722.09, 2174.92, 463.42, 61.90]
+    
+    totale_lordo = sum(potenza_lorda)
+    totale_netto = sum(potenza_netta)
+    autoconsumo_totale = totale_lordo - totale_netto
+
+# 2. KPI Summary Cards in alto
+    kpi1, kpi2, kpi3 = st.columns(3)
+  
+    with kpi1:
+        st.metric(label="Capacità Lorda Totale", value=f"{totale_lordo:,.2f} MW".replace(",", "."))
+    with kpi2:
+        st.metric(label="Capacità Netta Immissibile", value=f"{totale_netto:,.2f} MW".replace(",", "."), delta=f"-{autoconsumo_totale:.2f} MW Servizi Ausiliari", delta_color="inverse")
+    with kpi3:
+        quota_res = ((potenza_netta[0] + potenza_netta[1] + potenza_netta[3]) / totale_netto) * 100
+        st.metric(label="Quota Rinnovabili (sul Netto)", value=f"{quota_res:.1f} %")
+
+    st.markdown("---")
+
+    # Grafici impilati verticalmente (mobile-friendly)
+    st.subheader("Confronto Lordo vs Netta")
+    fig_confronto = go.Figure()
+    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_lorda, name='Lorda', marker_color='#1f77b4'))
+    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_netta, name='Netta', marker_color='#2ca02c'))
+    fig_confronto.update_layout(
+        barmode='group',
+        xaxis_title="Fonte",
+        yaxis_title="Potenza [MW]",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
+        margin=dict(l=10, r=10, t=60, b=10),
+        height=420
+    )
+    st.plotly_chart(fig_confronto, use_container_width=True)
+
+    st.subheader("Mix Energetico (Netto)")
+    fig_mix = go.Figure(data=[go.Pie(
+        labels=fonti,
+        values=potenza_netta,
+        hole=.3,
+        textinfo='percent',
+        marker=dict(colors=['#4CAF50', '#FFC107', '#FF5722', '#00BCD4', '#9C27B0'])
+    )])
+    fig_mix.update_layout(
+        showlegend=True,
+        legend=dict(orientation="h", y=-0.1, x=0),
+        margin=dict(l=10, r=10, t=30, b=10),
+        height=420
+    )
+    st.plotly_chart(fig_mix, use_container_width=True)
+
+
+
+# ==========================================
+# TAB 4: Contesto
+# ==========================================
+with tab4:
+    st.subheader("📖 Contesto")
+    st.markdown(f"""
+    La simulazione analizza il comportamento della rete di trasmissione della Sardegna durante una giornata caratterizzata dall'arrivo di un repentino fronte meteorologico in concomitanza con il tramonto solare.
+
+    * **Lo shock eolico:** Con il tramonto, la produzione fotovoltaica si azzera bruscamente, ma l'arrivo simultaneo di una perturbazione comporta un'accelerazione del vento tale da generare un picco di produzione eolica di **{wind_peak} MW**.
+    * **Il Vincolo Fisico:** Per garantire la stabilità di tensione e l'inerzia elettrica, le centrali termoelettriche non possono essere spente del tutto ma devono mantenere una generazione minima (**{thermal_min} MW**).
+    * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV in ingresso alla Stazione elettrica di Selargius.
+    * **Il Limite dell'Accumulo Stand Alone:** La Sardegna dispone di un comparto di accumulo stand alone (BESS) limitato a una capacità operativa netta di **{sg_threshold} MW**. Da solo, risulta insufficiente a contenere la congestione.
+    * **La Soluzione di Rete - il Tyrrhenian Link:** In corrispondenza della stazione elettrica di Selargius, l'energia in eccesso viene deviata sul nuovo elettrodotto sottomarino **HVDC Tyrrhenian Link** per essere esportata verso la Sicilia e la Campania.
+    * **Gestione del surplus energetico:** Il sistema di gestione interviene quando la potenza sulla dorsale supera la soglia di **{capacita_dorsale} MW**, attivando BESS e Tyrrhenian Link per riportare la temperatura sotto i limiti.
+    """)
+
+    st.markdown("---")
+    st.subheader("🗺️ Mappa degli asset")
+
+    data_asset = {
+        'Sito': ['Stazione elettrica Selargius', 'Terra Mala (Cagliari)', 'Fiumetorto (Termini Imerese)', 'Torre Tuscia Magazzeno (Battipaglia)'],
+        'Lat': [39.2600, 39.1961085, 37.9725134, 40.569476],
+        'Lon': [9.1600, 9.3295586, 13.7556869, 14.8238343],
+        'Dimensioni': [20, 10, 20, 20]
+    }
+    df_asset = pd.DataFrame(data_asset)
+
+    fig_map = go.Figure()
+
+    fig_map.add_trace(go.Scattermapbox(
+        lat=[40.8400, 39.2600], lon=[8.3200, 9.1600],
+        mode='lines+markers',
+        line=dict(width=4, color='#ff7f0e'),
+        name='Dorsale Elettrica 380 kV',
+        hoverinfo='text',
+        text='Dorsale Principale di Trasmissione Sarda'
+    ))
+
+    fig_map.add_trace(go.Scattermapbox(
+        lat=[39.2600, 39.1961085, 37.9725134, 40.569476],
+        lon=[9.1600, 9.3295586, 13.7556869, 14.8238343],
+        mode='lines',
+        line=dict(width=4, color='#2ca02c'),
+        name='Tyrrhenian Link',
+        hoverinfo='text',
+        text='Collegamento in Corrente Continua'
+    ))
+
+    fig_map.add_trace(go.Scattermapbox(
+        lat=df_asset['Lat'], lon=df_asset['Lon'],
+        mode='markers',
+        marker=go.scattermapbox.Marker(
+            size=df_asset['Dimensioni'],
+            color=['#d62728', '#d62728', '#d62728', '#d62728'],
+            opacity=0.9
+        ),
+        text=df_asset['Sito'],
+        hoverinfo='text',
+        name='Infrastrutture Chiave'
+    ))
+
+    fig_map.update_layout(
+        mapbox=dict(
+            style="open-street-map",
+            center=dict(lat=40.2, lon=10.5),
+            zoom=5.5
+        ),
+        margin=dict(l=0, r=0, t=0, b=0),
+        height=500,
+        showlegend=True,
+        legend=dict(
+            x=0.02, y=0.98,
+            xanchor="left", yanchor="top",
+            bgcolor="rgba(0, 0, 0, 0)",
+            font=dict(color="blue")
+        )
+    )
+    st.plotly_chart(fig_map, use_container_width=True)
+
+
 
