@@ -90,7 +90,27 @@ bess_absorption = np.where(minuti < 20, 0, sg_threshold)
 # Il rimanente surplus viene preso in carico dall'HVDC verso il continente.
 p_linea_scen2 = np.clip(p_linea_scen1 - bess_absorption, 0, None)
 
-# Modello Dinamico di Integrazione Termica (Equazione del bilancio termico transitorio)
+# --- CAPACITÀ DI TRASPORTO DELLA DORSALE ---
+capacita_dorsale = 947.0  # MW (soglia oltre la quale interviene il Link)
+
+# --- BESS: potenza assorbita nei tre scenari ---
+p_bess_scen0 = np.zeros_like(minuti)
+p_bess_scen1 = np.zeros_like(minuti)
+p_bess_scen2 = bess_absorption  # già definito nel codice
+
+# --- TYRRHENIAN LINK: potenza esportata nei tre scenari ---
+# Scenario 0: nessun Link, il surplus non è gestito
+p_link_scen0 = np.zeros_like(minuti)
+
+# Scenario 1: nessun Link, solo termico al minimo
+p_link_scen1 = np.zeros_like(minuti)
+
+# Scenario 2: il Link esporta il surplus che eccede la capacità della dorsale,
+# dopo l'assorbimento del BESS, fino a un massimo di 1000 MW
+surplus_da_esportare = np.clip(p_linea_scen1 - capacita_dorsale - p_bess_scen2, 0, None)
+p_link_scen2 = np.clip(surplus_da_esportare, 0, 1000.0)
+
+# Modello Dinamico 
 def calcola_temperatura_cavo(potenza_mw_vettore, T_ambient):
     V_linea = 380000  # 380 kV
     cos_phi = 0.9
@@ -230,7 +250,7 @@ with tab2:
         # Creazione Mappa GIS Interattiva con Plotly Mapbox (Stile Open-Street-Map nativo)
         fig_map = go.Figure()
 
-        # Linea 1: Dorsale Sarda Nord-Sud 
+        # Linea 1: Dorsale Nord-Sud 
         fig_map.add_trace(go.Scattermapbox(
             lat=[40.8400, 39.2600], lon=[8.3200, 9.1600],
             mode='lines+markers',
@@ -298,16 +318,17 @@ with tab3:
     
     # Creazione della Dashboard a due livelli con distanze corrette
     fig_dash = make_subplots(
-        rows=2, cols=1, 
+        rows=3, cols=1, 
         shared_xaxes=True, 
-        vertical_spacing=0.15,
+        vertical_spacing=0.10,
         subplot_titles=(
             "<b>1. Transito di Potenza Complessivo sulla Dorsale 380 kV (MW)</b>", 
-            "<b>2. Dinamica della Temperatura del Conduttore (°C)</b>"
+            "<b>2. Dinamica della Temperatura del Conduttore (°C)</b>",
+            "<b>3. Potenza BESS + Tyrrhenian Link (MW)</b>"
         )
     )
 
-    # --- GRAFICO 1: FLUSSI DI POTENZA ---
+    # --- GRAFICO 1: FLUSSI DI POTENZA SULLA DORSALE ---
     fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen0, name="Termico Rigido", line=dict(color='#E30613', width=2, dash='dot')), row=1, col=1)
     fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen1, name="Termico al Minimo", line=dict(color='#ff7f0e', width=2)), row=1, col=1)
     fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen2, name="BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3)), row=1, col=1)
@@ -317,6 +338,11 @@ with tab3:
     fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen1, name="Temp - Termico al Minimo", line=dict(color='#ff7f0e', width=2), showlegend=False), row=2, col=1)
     fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen2, name="Temp - BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3.5), showlegend=False), row=2, col=1)
 
+    # --- GRAFICO 3: BESS + TYRRHENIAN LINK ---
+    fig_dash.add_trace(go.Scatter(x=minuti, y=p_bess_scen2, name="BESS (assorbimento)", line=dict(color='#1f77b4', width=2), fill='tozeroy'), row=3, col=1)
+    fig_dash.add_trace(go.Scatter(x=minuti, y=p_link_scen2, name="Tyrrhenian Link (esportazione)", line=dict(color='#2ca02c', width=2), fill='tozeroy'), row=3, col=1)
+
+    
     # Linea limite di sicurezza (da letteratura)
     fig_dash.add_hline(y=85.0, line_dash="dash", line_color="magenta", line_width=2,
                         annotation_text="Limite sicurezza (85°C)", annotation_position="top left", row=2, col=1)
@@ -324,14 +350,17 @@ with tab3:
     # Ottimizzazione del Layout
     fig_dash.update_layout(
         margin=dict(t=60, b=40, l=60, r=40),
-        height=650, 
+        height=900, 
         template="plotly_white", 
         legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="center", x=0.5)
     )
 
-    fig_dash.update_xaxes(title_text="Tempo (Minuti)", row=2, col=1)
+    fig_dash.update_xaxes(title_text="Tempo (Minuti)", row=3, col=1)
     fig_dash.update_yaxes(title_text="Potenza [MW]", row=1, col=1)
     fig_dash.update_yaxes(title_text="Temperatura [°C]", row=2, col=1)
+    fig_dash.update_yaxes(title_text="Potenza [MW]", row=3, col=1)
+
+
 
     # Rendering del grafico interattivo all'interno di Streamlit
     st.plotly_chart(fig_dash, use_container_width=True)
