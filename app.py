@@ -56,42 +56,42 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 # SIMULAZIONE
 # ---------------------------------------
 with tab1:
-     c = st.columns(3)
-    r = m.kpi_rows(D)
-    for col, row in zip(c, r):
-        col.metric(row["Scenario"], f'{row["T max (°C)"]} °C', row["Tempo di intervento"], delta_color="off")
-    st.caption("«Tempo di intervento» = minuti dalla rampa (min 20) al superamento di 85 °C: è la finestra per redispatching.")
-    b = st.columns(3)
-    b[0].metric("Energia esportata dal Link", f'{D["link_mwh"]:.0f} MWh')
-    b[1].metric("Energia assorbita dal BESS", f'{D["soc_mwh"]:.0f} MWh')
-    b[2].metric("Eolico ridotto (curtailment)", f'{D["curt_mwh"]:.0f} MWh',
-                "costo dell'assenza del Link" if D["curt_mwh"] > 0 else None, delta_color="off")
- 
-    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.08,
-                        subplot_titles=("Transito sulla dorsale (MW)", "Temperatura del conduttore (°C)",
-                                        "Leve di flessibilità (MW)"))
-    t = D["t"]
-    for key, y, name, dash in (("0", D["inj0"], "Termico rigido", "dot"), ("1", D["inj1"], "Termico al minimo", "solid"),
-                               ("2", D["line2"], "Con BESS + Link", "solid")):
-        fig.add_trace(go.Scatter(x=t, y=y, name=name, line=dict(color=COL[key], dash=dash, width=2)), row=1, col=1)
-    fig.add_hline(y=line_cap, line_dash="dash", line_color="gray", row=1, col=1,
-                  annotation_text="Soglia di gestione", annotation_position="top left")
-    for key, y, name, dash in (("0", D["T0"], "", "dot"), ("1", D["T1"], "", "solid"), ("2", D["T2"], "", "solid")):
-        fig.add_trace(go.Scatter(x=t, y=y, line=dict(color=COL[key], dash=dash, width=2), showlegend=False), row=2, col=1)
-    fig.add_hline(y=m.T_LIMIT, line_dash="dash", line_color="magenta", row=2, col=1,
-                  annotation_text="Limite 85 °C", annotation_position="top left")
-    fig.add_trace(go.Scatter(x=t, y=D["bess"], name="BESS", line=dict(color="#1f77b4")), row=3, col=1)
-    fig.add_trace(go.Scatter(x=t, y=D["link"], name="Tyrrhenian Link", line=dict(color="#9467bd")), row=3, col=1)
-    fig.add_trace(go.Scatter(x=t, y=D["curt"], name="Curtailment", line=dict(color="#6b7280", dash="dot"),
-                             showlegend=bool(D["curt"].max() > 0)), row=3, col=1)
-    fig.add_vline(x=m.RAMP_MIN, line_dash="dot", line_color="lightgray")
-    fig.update_xaxes(title_text="Tempo (min)", row=3, col=1)
-    fig.update_layout(height=820, template="plotly_white", margin=dict(t=50, b=10, l=10, r=10),
-                      legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center"))
-    st.plotly_chart(fig, width="stretch")
-    st.dataframe(pd.DataFrame(r), hide_index=True, width="stretch")
-    if not link_on:
-        st.warning("Senza Link il surplus oltre la soglia va ridotto (curtailment): la rete resta sicura ma si perde energia rinnovabile.")
+  c = st.columns(3)
+  r = m.kpi_rows(D)
+  for col, row in zip(c, r):
+      col.metric(row["Scenario"], f'{row["T max (°C)"]} °C', row["Tempo di intervento"], delta_color="off")
+  st.caption("«Tempo di intervento» = minuti dalla rampa (min 20) al superamento di 85 °C: è la finestra per redispatching.")
+  b = st.columns(3)
+  b[0].metric("Energia esportata dal Link", f'{D["link_mwh"]:.0f} MWh')
+  b[1].metric("Energia assorbita dal BESS", f'{D["soc_mwh"]:.0f} MWh')
+  b[2].metric("Eolico ridotto (curtailment)", f'{D["curt_mwh"]:.0f} MWh',
+              "costo dell'assenza del Link" if D["curt_mwh"] > 0 else None, delta_color="off")
+
+  fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.08,
+                      subplot_titles=("Transito sulla dorsale (MW)", "Temperatura del conduttore (°C)",
+                                      "Leve di flessibilità (MW)"))
+  t = D["t"]
+  for key, y, name, dash in (("0", D["inj0"], "Termico rigido", "dot"), ("1", D["inj1"], "Termico al minimo", "solid"),
+                             ("2", D["line2"], "Con BESS + Link", "solid")):
+      fig.add_trace(go.Scatter(x=t, y=y, name=name, line=dict(color=COL[key], dash=dash, width=2)), row=1, col=1)
+  fig.add_hline(y=line_cap, line_dash="dash", line_color="gray", row=1, col=1,
+                annotation_text="Soglia di gestione", annotation_position="top left")
+  for key, y, name, dash in (("0", D["T0"], "", "dot"), ("1", D["T1"], "", "solid"), ("2", D["T2"], "", "solid")):
+      fig.add_trace(go.Scatter(x=t, y=y, line=dict(color=COL[key], dash=dash, width=2), showlegend=False), row=2, col=1)
+  fig.add_hline(y=m.T_LIMIT, line_dash="dash", line_color="magenta", row=2, col=1,
+                annotation_text="Limite 85 °C", annotation_position="top left")
+  fig.add_trace(go.Scatter(x=t, y=D["bess"], name="BESS", line=dict(color="#1f77b4")), row=3, col=1)
+  fig.add_trace(go.Scatter(x=t, y=D["link"], name="Tyrrhenian Link", line=dict(color="#9467bd")), row=3, col=1)
+  fig.add_trace(go.Scatter(x=t, y=D["curt"], name="Curtailment", line=dict(color="#6b7280", dash="dot"),
+                           showlegend=bool(D["curt"].max() > 0)), row=3, col=1)
+  fig.add_vline(x=m.RAMP_MIN, line_dash="dot", line_color="lightgray")
+  fig.update_xaxes(title_text="Tempo (min)", row=3, col=1)
+  fig.update_layout(height=820, template="plotly_white", margin=dict(t=50, b=10, l=10, r=10),
+                    legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center"))
+  st.plotly_chart(fig, width="stretch")
+  st.dataframe(pd.DataFrame(r), hide_index=True, width="stretch")
+  if not link_on:
+      st.warning("Senza Link il surplus oltre la soglia va ridotto (curtailment): la rete resta sicura ma si perde energia rinnovabile.")
 
 
 # ---------------- tab 2 ----------------
