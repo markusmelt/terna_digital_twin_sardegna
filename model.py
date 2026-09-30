@@ -8,7 +8,7 @@ Calibrazione su un punto: 85 °C a 1600 A, 25 °C, V0 = 0,6 m/s  ->  DT_MAX = 60
 Con f(V) = h_eff/h_ref = (1-s) + s*(max(V,V0)/V0)^0.6:
     T_target = T_amb + (I/I_MAX)^2 * DT_MAX / f,   tau = TAU / f.
 Vento dalla produzione eolica (proxy): V = k * V_RATED * (P_eol/P_rif)^(1/3).
-Integrazione esatta per passo (target costante nel minuto), non Eulero.
+Integrazione esatta per passo (target costante nel minuto)
 """
 from dataclasses import dataclass
 import numpy as np
@@ -22,7 +22,7 @@ TAU = 20.0          # min, costante di tempo senza vento
 RAMP_MIN = 20       # minuto della rampa eolica
 N_MIN = 121
 # Raffreddamento da vento (illustrativo, NON IEEE 738): h_eff = h_ref * f
-V_RATED, WIND_RATED = 12.0, 1200.0   # m/s e MW di riferimento per il proxy del vento
+V_RATED, WIND_RATED = 12.0, 1200.0   # m/s e MW di riferimento 
 V0, CONV_SHARE = 0.6, 0.5            # velocita' di calibrazione; quota di convezione in h_ref
 
 
