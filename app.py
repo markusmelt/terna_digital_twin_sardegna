@@ -96,7 +96,7 @@ with tab1:
 # ---------------- tab 2 ----------------
 # ASSUNZIONI
 # ---------------------------------------
-with tab3:
+with tab2:
     st.header("Assunzioni e limiti")
     st.subheader("Modello termico: dal bilancio di potenza per unità di lunghezza")
     st.markdown("Punto di partenza: bilancio termico transitorio del conduttore, in **W/m** (forma di IEEE 738):")
@@ -163,7 +163,7 @@ with tab3:
 # ---------------- tab 3 ----------------
 # VERIFICHE NUMERICHE
 # ---------------------------------------
-with tab4:
+with tab3:
     st.subheader("Verifiche numeriche del modello")
     rows = [{"Test": n, "Atteso": f"{a:.2f}", "Ottenuto": f"{b:.2f}", "Esito": "✅" if abs(a - b) < 0.05 else "❌"}
             for n, a, b in m.self_checks()]
@@ -178,7 +178,7 @@ with tab4:
 # ---------------- tab 4 ----------------
 # CAPACITA' SARDEGNA
 # ---------------------------------------
-with tab5:
+with tab4:
     fonti = ["Eolico", "Fotovoltaico", "Termoelettrico", "Idrico", "Accumulo stand-alone"]
     lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
     netta = [1193.20, 1722.09, 2174.92, 463.42, 61.90]
@@ -197,10 +197,10 @@ with tab5:
     st.plotly_chart(f3, width="stretch")
     st.caption("Dati: dashboard Terna (potenza efficiente), come estratti dall'autore.")
 
-# ---------------- tab 6 ----------------
+# ---------------- tab 5 ----------------
 # CONTESTO
 # ---------------------------------------
-with tab6:
+with tab5:
     st.markdown(f"""
     Al tramonto il fotovoltaico si azzera mentre un fronte di vento porta l'eolico a **{wind_peak} MW**. Il termico non può scendere sotto il
     minimo tecnico (**{thermal_min} MW**, servizi di sicurezza). La somma carica la dorsale a 380 kV verso la stazione di Selargius.
