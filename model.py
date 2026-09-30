@@ -1,7 +1,13 @@
 """Modello del transitorio termico di una dorsale 380 kV (PoC dimostrativo).
 
-Modello del primo ordine: tau * dT/dt + T = T_target, con
-T_target = T_amb + (I / I_MAX)^2 * DT_MAX / f   (f = 1 senza vento).
+Partenza (W/m, forma IEEE 738):  q_c + q_r + m*Cp*dT/dt = q_s + I^2 R(T)
+Semplificazioni: q_s = 0 (notte); q_c + q_r ~ h_eff(V) * (T - T_a) (irraggiamento linearizzato,
+convezione forzata h_c ~ V^0.6); R costante.
+Risultato: tau(V) dT/dt + T = T_a + I^2 R / h_eff(V), con tau = C / h_eff.
+Calibrazione su un punto: 85 °C a 1600 A, 25 °C, V0 = 0,6 m/s  ->  DT_MAX = 60 °C.
+Con f(V) = h_eff/h_ref = (1-s) + s*(max(V,V0)/V0)^0.6:
+    T_target = T_amb + (I/I_MAX)^2 * DT_MAX / f,   tau = TAU / f.
+Vento dalla produzione eolica (proxy): V = k * V_RATED * (P_eol/P_rif)^(1/3).
 Integrazione esatta per passo (target costante nel minuto), non Eulero.
 """
 from dataclasses import dataclass
