@@ -1,14 +1,12 @@
 """Modello del transitorio termico di una dorsale 380 kV (PoC dimostrativo).
 
 Partenza (W/m, forma IEEE 738):  q_c + q_r + m*Cp*dT/dt = q_s + I^2 R(T)
-Semplificazioni: q_s = 0 (notte); q_c + q_r ~ h_eff(V) * (T - T_a) (irraggiamento linearizzato,
-convezione forzata h_c ~ V^0.6); R costante.
-Risultato: tau(V) dT/dt + T = T_a + I^2 R / h_eff(V), con tau = C / h_eff.
-Calibrazione su un punto: 85 °C a 1600 A, 25 °C, V0 = 0,6 m/s  ->  DT_MAX = 60 °C.
-Con f(V) = h_eff/h_ref = (1-s) + s*(max(V,V0)/V0)^0.6:
-    T_target = T_amb + (I/I_MAX)^2 * DT_MAX / f,   tau = TAU / f.
-Vento dalla produzione eolica (proxy): V = k * V_RATED * (P_eol/P_rif)^(1/3).
-Integrazione esatta per passo (target costante nel minuto)
+Semplificazioni: q_s = 0 (notte); q_c + q_r ~ h_eff * (T - T_a) (linearizzazione);
+R costante; il vento aumenta lo scambio secondo f(V) = (max(V, V0) / V0)^0.5, con h_eff = f * h_ref.
+Risultato: tau dT/dt + T = T_a + I^2 R / h_eff, con tau = C / h_eff.
+Calibrazione su un punto: 85 °C a 1600 A, 25 °C, V = V0 = 0,6 m/s (f = 1)  ->  DT_MAX = 60 °C. Quindi:
+    T_target = T_amb + (I/I_MAX)^2 * DT_MAX / f(V),   tau = TAU / f(V).
+Integrazione esatta per passo (target costante nel minuto), non Eulero.
 """
 from dataclasses import dataclass
 import numpy as np
@@ -19,11 +17,9 @@ I_MAX = 1600.0      # A, corrente di calibrazione
 T_LIMIT = 85.0      # °C, limite di sicurezza
 DT_MAX = 60.0       # °C a I_MAX con T_amb = 25 °C, senza vento (85 - 25)
 TAU = 20.0          # min, costante di tempo senza vento
+V0_WIND, N_WIND = 0.6, 0.5   # m/s di calibrazione; esponente (ordine di grandezza)
 RAMP_MIN = 20       # minuto della rampa eolica
 N_MIN = 121
-# Raffreddamento da vento (illustrativo, NON IEEE 738): h_eff = h_ref * f
-V_RATED, WIND_RATED = 12.0, 1200.0   # m/s e MW di riferimento 
-V0, CONV_SHARE = 0.6, 0.5            # velocita' di calibrazione; quota di convezione in h_ref
 
 
 @dataclass(frozen=True)
@@ -37,8 +33,7 @@ class Params:
     link_mw: float = 1000.0
     link_available: bool = True
     t_amb: float = 25.0
-    dlr: bool = False              # raffreddamento da vento
-    dlr_k: float = 0.3             # frazione di vento efficace sul conduttore
+    wind_ms: float = 0.6           # vento sul conduttore (m/s); 0,6 = condizione convenzionale
 
 
 def current_a(p_mw):
@@ -50,14 +45,14 @@ def thermal_limit_mw():
     return float(np.sqrt(3) * V_LINE * I_MAX * COS_PHI / 1e6)
 
 
-def temperature(p_mw, t_amb, wind_mw=None, dlr=False, k=0.3):
+def wind_factor(v_ms):
+    return (max(float(v_ms), V0_WIND) / V0_WIND) ** N_WIND
+
+
+def temperature(p_mw, t_amb, f=1.0):
     i = current_a(p_mw)
-    f = np.ones(len(i))
-    if dlr and wind_mw is not None:
-        v = V_RATED * (np.clip(wind_mw, 0, None) / WIND_RATED) ** (1 / 3) * k
-        f = 1 + CONV_SHARE * ((np.maximum(v, V0) / V0) ** 0.6 - 1)
     target = t_amb + (i / I_MAX) ** 2 * DT_MAX / f
-    tau = TAU / f
+    tau = np.full(len(i), TAU / f)
     out = np.empty(len(i))
     out[0] = target[0]
     for j in range(len(i) - 1):
@@ -91,7 +86,7 @@ def dispatch(p: Params):
 
 def simulate(p: Params):
     d = dispatch(p)
-    args = dict(t_amb=p.t_amb, wind_mw=d["wind"], dlr=p.dlr, k=p.dlr_k)
+    args = dict(t_amb=p.t_amb, f=wind_factor(p.wind_ms))
     d["T0"] = temperature(d["inj0"], **args)
     d["T1"] = temperature(d["inj1"], **args)
     d["T2"] = temperature(d["line2"], **args)
