@@ -126,17 +126,51 @@ with tab2:
 # ---------------- tab 3 ----------------
 with tab3:
     st.header("Assunzioni e limiti")
-    st.subheader("Modello termico")
-    st.latex(r"\tau \frac{dT_c}{dt} + T_c = T_a + \left(\frac{I}{I_{max}}\right)^2 \frac{\Delta T_{max}}{f_v}")
-    st.markdown("""
-    - Primo ordine, integrazione **esatta per passo** (target costante nel minuto). Il rumore sulla temperatura è stato tolto.
-    - Calibrato in modo che a 1600 A e 25 °C il conduttore sia a 85 °C (ΔT = 60 °C). **Semplificazione ispirata** alla logica di IEEE 738/CIGRE, non loro applicazione.
-    - Con il vento attivo, $f_v$ aumenta lo scambio (τ diminuisce): effetto qualitativo, non calibrato.
+    st.subheader("Modello termico: dal bilancio di potenza per unità di lunghezza")
+    st.markdown("Punto di partenza: bilancio termico transitorio del conduttore, in **W/m** (forma di IEEE 738):")
+    st.latex(r"q_c + q_r + m\,C_p\,\frac{dT_c}{dt} = q_s + I^2\,R(T_c)")
+    st.markdown(r"""
+    - $q_c$: perdita per convezione [W/m]; $q_r$: perdita per irraggiamento [W/m]; $q_s$: guadagno solare [W/m]
+    - $m\,C_p$: capacità termica per unità di lunghezza [J/(m·°C)]; $R(T_c)$: resistenza per unità di lunghezza [Ω/m]
+    - $I^2 R$: riscaldamento per effetto Joule [W/m]; $T_c$ temperatura del conduttore, $T_a$ dell'aria
+
+    **Semplificazioni, in ordine:**
+
+    1. **Notte:** $q_s = 0$ (tramonto in poi).
+    2. **Irraggiamento linearizzato** attorno al punto di lavoro:
+       $q_r = \pi D \varepsilon \sigma\left[(T_c+273)^4-(T_a+273)^4\right] \approx h_r\,(T_c - T_a)$.
+    3. **Convezione forzata:** $q_c = h_c(V)\,(T_c - T_a)$ con $h_c \propto V^{0,6}$ (esponente della forma ad alto vento di IEEE 738),
+       con un minimo per la convezione naturale. Insieme: $q_c + q_r = h_{eff}(V)\,(T_c - T_a)$, con $h_{eff} = h_r + h_c(V)$.
+    4. **Resistenza costante:** $R(T_c) \approx R$. Trascura circa +0,4 %/°C, quindi **sottostima** il riscaldamento a temperature alte.
+    5. **Risultato:** con $C = m C_p$ si ottiene un modello del primo ordine.
+    """)
+    st.latex(r"C\,\frac{dT_c}{dt} + h_{eff}(V)\,(T_c - T_a) = I^2 R"
+             r"\;\;\Rightarrow\;\;"
+             r"\tau(V)\,\frac{dT_c}{dt} + T_c = T_a + \frac{I^2 R}{h_{eff}(V)},\qquad \tau(V)=\frac{C}{h_{eff}(V)}")
+    st.markdown(r"""
+    6. **Calibrazione su un solo punto**, senza dati di catalogo del conduttore: a $I_{max}$ = 1600 A, $T_a$ = 25 °C e vento di riferimento
+       $V_0$ = 0,6 m/s (condizione convenzionale di portata statica) il conduttore è a 85 °C, quindi
+       $\Delta T_{max} = I_{max}^2 R / h_{ref} = 60$ °C. Con $f(V) = h_{eff}(V)/h_{ref}$:
+    """)
+    st.latex(r"T_{target} = T_a + \left(\frac{I}{I_{max}}\right)^2 \frac{\Delta T_{max}}{f(V)},\quad"
+             r"\tau = \frac{\tau_0}{f(V)},\quad"
+             r"f(V) = (1-s) + s\left(\frac{\max(V,V_0)}{V_0}\right)^{0,6}")
+    st.markdown(r"""
+    dove $s$ è la quota di scambio dovuta alla convezione a $V_0$ (assunta 0,5). Senza vento utile ($V \le V_0$) si ha $f = 1$.
+
+    7. **Velocità del vento dalla produzione eolica** (proxy grossolano): $V = k\,V_{rif}\,(P_{eol}/P_{rif})^{1/3}$, dalla legge cubica della potenza
+       eolica. Il fattore $k$ tiene conto di angolo di incidenza, schermatura e distanza tra parchi e linea: è un'assunzione, non una misura.
+
+    **Integrazione:** target costante nel minuto, quindi soluzione esatta per passo:
+    $T_{j+1} = T_{target} + (T_j - T_{target})\,e^{-\Delta t/\tau}$.
+    Le temperature assolute sono **indicative** (calibrazione su un punto); il confronto **tra scenari** è più robusto.
     """)
     st.table(pd.DataFrame({
-        "Parametro": ["V concatenata", "cos φ", "I_max", "ΔT a I_max", "τ", "Limite", "Passo"],
-        "Valore": ["380 kV", "0,9", "1600 A (≈ %.0f MW)" % m.thermal_limit_mw(), "60 °C", "20 min", "85 °C", "1 min"],
-        "Nota": ["tensione nominale", "tipico", "calibrazione", "= 85 − 25", "assunzione", "soglia di sicurezza", "esatto"]}))
+        "Parametro": ["V concatenata", "cos φ", "I_max", "ΔT_max a I_max", "V_0", "τ_0 (a V_0)", "s", "k", "V_rif, P_rif", "Limite", "Passo"],
+        "Valore": ["380 kV", "0,9", "1600 A (≈ %.0f MW)" % m.thermal_limit_mw(), "60 °C", "0,6 m/s", "20 min", "0,5",
+                   "0,3 (regolabile)", "12 m/s, 1200 MW", "85 °C", "1 min"],
+        "Origine": ["nominale", "tipico", "calibrazione", "= 85 − 25", "convenzione IEEE 738", "assunzione", "assunzione",
+                    "assunzione", "assunzione", "soglia di sicurezza", "esatto"]}))
     st.subheader("Cosa rappresenta la soglia di gestione")
     st.markdown(f"La soglia ({line_cap} MW) è un **margine di esercizio**, non il limite termico (≈ {m.thermal_limit_mw():.0f} MW).")
     st.subheader("Scenari")
