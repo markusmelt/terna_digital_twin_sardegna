@@ -1,480 +1,210 @@
-import streamlit as st
+import io
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import segno
-import io
+import streamlit as st
 
-# Configurazione della pagina Streamlit 
-st.set_page_config(
-    page_title="Digital Twin - Thermal Management Overhead Conductors",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
+import model as m
 
-# --- INTESTAZIONE PRINCIPALE ---
-st.title("⚡ Digital Twin - Thermal Management Overhead Conductors")
-st.markdown("""
-*Strumento di simulazione interattiva per l'analisi del transitorio termico sulla dorsale elettrica a 380 kV e la valutazione dei meccanismi di flessibilità di rete.*
-""")
+st.set_page_config(page_title="Simulatore transitorio termico dorsale 380 kV",
+                   page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
+URL = "https://dt-overheadconductors.streamlit.app/"
+COL = {"0": "#E30613", "1": "#ff7f0e", "2": "#2ca02c"}
 
-# --- AVVISO MOBILE ---
-st.info("📱 **Su mobile:** apri il menu (☰) in alto a sinistra per accedere ai parametri del simulatore.")
+st.title("⚡ Simulatore del transitorio termico – dorsale 380 kV Sardegna")
+st.caption("Rampa eolica serale: quanto tempo c'è per intervenire prima degli 85 °C, e cosa costa ciascuna leva. "
+           "Modello semplificato e dimostrativo: limiti dichiarati nel tab «Assunzioni».")
+st.info("📱 Su mobile apri il menu (☰) in alto a sinistra per i parametri.")
 
-# --- SIDEBAR INTERATTIVA (PARAMETRI DI INPUT) ---
-st.sidebar.header("🎛️ Parametri del Simulatore")
+# ---------------- input ----------------
+sb = st.sidebar
+sb.header("🎛️ Parametri")
+wind_peak = sb.slider("Picco rampa eolica (MW)", 0, 1200, 1000, 50)
+thermal_nominal = sb.slider("Termico iniziale (MW)", 300, 600, 450, 25)
+thermal_min = sb.slider("Minimo tecnico termico (MW)", 100, int(thermal_nominal), min(225, int(thermal_nominal)), 25)
+line_cap = sb.slider("Soglia di gestione della dorsale (MW)", 600, 1100, 800, 10,
+                     help=f"Non è il limite termico: a 1600 A, 380 kV e cos φ 0,9 il limite è ≈ {m.thermal_limit_mw():.0f} MW.")
+sb.subheader("Flessibilità")
+bess_mw = sb.slider("BESS stand-alone, potenza (MW)", 0.0, 61.9, 61.9, 5.0)
+bess_h = sb.slider("BESS, durata a potenza nominale (h)", 0.5, 4.0, 2.0, 0.5,
+                   help="Assunzione: il dato Terna riguarda la potenza, non l'energia.")
+link_on = sb.toggle("Tyrrhenian Link disponibile (a regime)", True,
+                    help="Scenario a regime: verifica lo stato di avanzamento dell'opera.")
+link_mw = sb.slider("Capacità Link (MW)", 0, 1000, 1000, 50, disabled=not link_on)
+sb.subheader("Ambiente")
+t_amb = sb.slider("Temperatura ambiente (°C)", -5.0, 50.0, 25.0, 1.0)
+dlr = sb.toggle("Raffreddamento da vento (DLR illustrativo)", False,
+                help="Il vento che produce i MW raffredda anche il conduttore. Modello qualitativo, non IEEE 738.")
+k = sb.slider("Quota di vento efficace sul conduttore", 0.1, 0.6, 0.3, 0.05, disabled=not dlr)
+sb.markdown("---")
+sb.subheader("📱 Link al progetto")
+buf = io.BytesIO()
+segno.make_qr(URL).save(buf, kind="png", scale=5, dark="#000000", light="#ffffff")
+sb.image(buf.getvalue(), caption="Apri la web-app", width="stretch")
 
-# Slider dinamici 
-wind_peak = st.sidebar.slider("Picco della Rampa Eolica (MW)", min_value=0, max_value=1200, value=1000, step=50, help="Picco di produzione eolica al minuto 20") # slider eolico
-percentuale_eolico = (wind_peak / 1193.20) * 100
-st.sidebar.caption(f"💨 Equivale al **{percentuale_eolico:.1f}%** della potenza netta installata.")
+P = m.Params(wind_peak=wind_peak, thermal_nominal=thermal_nominal, thermal_min=thermal_min, line_cap=line_cap,
+             bess_mw=bess_mw, bess_mwh=bess_mw * bess_h, link_mw=link_mw, link_available=link_on,
+             t_amb=t_amb, dlr=dlr, dlr_k=k)
+D = m.simulate(P)
 
-thermal_nominal = st.sidebar.slider("Potenza Termica Nominale Iniziale (MW)", min_value=300, max_value=600, value=450, step=25, help="Livello di generazione delle centrali termoelettriche prima dell'evento meteo.") # slider potenza termica iniziale nominale
-percentuale_nominal = (thermal_nominal / 2174.92) * 100
-st.sidebar.caption(f"🏭 Equivale al **{percentuale_nominal:.1f}%** della potenza netta termica.")
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+    ["📊 Simulazione", "🔍 Sensibilità", "📋 Assunzioni", "✅ Verifiche", "⚡ Capacità Sardegna", "🗺️ Contesto"])
 
-thermal_min = st.sidebar.slider("Minimo Tecnico Centrale Termica (MW)", min_value=100, max_value=int(thermal_nominal), value=225, step=25, help="Il limite inferiore a cui la centrale può scendere durante il redispatching.") # slider minimo tecnico centrali termiche
-percentuale_termico = (thermal_min / 2174.92) * 100
-st.sidebar.caption(f"💨 Equivale al **{percentuale_termico:.1f}%** della potenza netta termica.")
-
-capacita_dorsale = st.sidebar.slider("Capacità di trasporto della dorsale (MW)", min_value=600, max_value=1100, value=800, step=10, help="Soglia oltre la quale il sistema di gestione (BESS + Tyrrhenian Link) interviene per evitare il sovraccarico termico.") # slider capacità trasporto dorsale 380 kV con intervento BESS+Tyrrhenian link
-
-sg_threshold = st.sidebar.slider("Capacità di accumulo stand alone (MW)", min_value=0.0, max_value=61.90, value=61.90, step=5.0, help="Capacità del comparto BESS") # slider BESS
-percentuale_BESS = (sg_threshold / 61.90) * 100
-st.sidebar.caption(f"💨 Equivale al **{percentuale_BESS:.1f}%** della potenza netta di accumulo.")
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("🌤️ Condizioni Meteo Ambientali")
-
-t_ambient = st.sidebar.slider("Temperatura Ambiente (°C)", min_value=-5.0, max_value=50.0, value=25.0, step=1.0) # slider temperatura ambiente
-
-st.sidebar.markdown("---")
-st.sidebar.info("""💡 **Info:** Modifica gli slider per simulare scenari differenti.""")
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("📱 Link al progetto")
-
-url_progetto = "https://dt-overheadconductors.streamlit.app/"
-
-# Genera il QR Code in memoria
-qrcode = segno.make_qr(url_progetto)
-
-# Converte il QR code in un flusso di immagini PNG 
-buffer = io.BytesIO()
-qrcode.save(buffer, kind='png', scale=5, dark='#000000', light='#ffffff')
-
-# Rendering su Streamlit
-st.sidebar.image(buffer.getvalue(), caption="Inquadra per accedere alla web-app", use_container_width=True)
-
-
-
-# --- MOTORE DI CALCOLO DELLA SIMULAZIONE ---
-minuti = np.arange(0, 121)
-np.random.seed(42)
-
-# Generazione profili meteo-dipendenti basati sugli input dello slider
-wind_base = np.where(minuti < 20, 100, wind_peak)
-eolico_mw = np.clip(wind_base + np.random.normal(0, 10, len(minuti)), 0, None)
-solare_mw = np.clip(100 - (minuti * 1.2) + np.random.normal(0, 2, len(minuti)), 0, None)
-
-# Scenario 0: Il termico rimane rigido al valore scelto nello slider
-thermal_scen0 = np.ones(len(minuti)) * thermal_nominal
-p_linea_scen0 = eolico_mw + solare_mw + thermal_scen0
-
-# Scenario 1: Termico parte dal nominale e scende al minimo configurato al min 20
-thermal_scen1 = np.where(minuti < 20, thermal_nominal, thermal_min)
-p_linea_scen1 = eolico_mw + solare_mw + thermal_scen1
-
-# Scenario 2: Smart Grid (Azione combinata BESS + HVDC Tyrrhenian Link)
-bess_absorption = np.where(minuti < 20, 0, sg_threshold)
-
-# --- BESS: potenza assorbita nei tre scenari ---
-p_bess_scen0 = np.zeros_like(minuti)
-p_bess_scen1 = np.zeros_like(minuti)
-p_bess_scen2 = bess_absorption  # già definito nel codice
-
-# --- TYRRHENIAN LINK: potenza esportata nei tre scenari ---
-# Scenario 0: nessun Link, il surplus non è gestito
-p_link_scen0 = np.zeros_like(minuti)
-
-# Scenario 1: nessun Link, solo termico al minimo
-p_link_scen1 = np.zeros_like(minuti)
-
-# Scenario 2: il Link esporta il surplus che eccede la capacità della dorsale,
-# dopo l'assorbimento del BESS, fino a un massimo di 1000 MW
-surplus_da_esportare = np.clip(p_linea_scen1 - capacita_dorsale - p_bess_scen2, 0, None)
-p_link_scen2 = np.clip(surplus_da_esportare, 0, 1000.0)
-
-# La potenza effettiva sulla dorsale viene alleggerita dall'assorbimento BESS e il rimanente surplus viene preso in carico dall'HVDC verso il continente.
-p_linea_scen2 = np.clip(p_linea_scen1 - bess_absorption - p_link_scen2, 0, None)
-
-# Modello Dinamico 
-def calcola_temperatura_cavo(potenza_mw_vettore, T_ambient):
-    V_linea = 380000  # 380 kV
-    cos_phi = 0.9
-    I_max = 1600.0    # Corrente limite nominale
-
-    # Delta T di progetto: a pieno carico (I_max), il cavo si scalda di 60°C sopra la temperatura ambiente
-    delta_T_max_joule = 60.0 
-    tau = 20.0        # Costante di tempo termica (minuti)
-    dt = 1.0
-    
-    corrente_ampere = (potenza_mw_vettore * 1e6) / (np.sqrt(3) * V_linea * cos_phi)
-    
-    # Temperatura iniziale (Stato stazionario al minuto 0)
-    t_iniziale = T_ambient + ((corrente_ampere[0] / I_max) ** 2) * delta_T_max_joule
-    t_cavo = [t_iniziale]
-    
-    for i in range(len(minuti) - 1):
-        T_target = T_ambient + ((corrente_ampere[i] / I_max) ** 2) * delta_T_max_joule ## Il target è: Temperatura Ambiente + l'effetto Joule proporzionale al quadrato della corrente
-        dT = (1.0 / tau) * (T_target - t_cavo[-1]) * dt # Equazione differenziale del transitorio termico
-        t_cavo.append(t_cavo[-1] + dT + np.random.normal(0, 0.02))
-    return t_cavo
-
-t_scen0 = calcola_temperatura_cavo(p_linea_scen0, t_ambient)
-t_scen1 = calcola_temperatura_cavo(p_linea_scen1, t_ambient)
-t_scen2 = calcola_temperatura_cavo(p_linea_scen2, t_ambient)
-
-
-# --- INTERFACCIA UTENTE A TAB ---
-tab1, tab2, tab3, tab4 = st.tabs(["📊 Simulazioni", "📋 Assunzioni e Ipotesi", "⚡Capacità di generazione - Sardegna", "🗺️ Contesto"])
-
-# ==========================================
-# TAB 1: SIMULAZIONI
-# ==========================================
+# ---------------- tab 1 ----------------
 with tab1:
-    st.subheader("📊 Analisi Comparativa degli Scenari Operativi")
-    st.markdown("""
-    Visualizzazione dei flussi di potenza sulla dorsale interna a 380 kV e del profilo termico del conduttore. 
-    """)
-    
-    # Creazione della Dashboard a due livelli con distanze corrette
-    fig_dash = make_subplots(
-        rows=3, cols=1, 
-        shared_xaxes=True, 
-        vertical_spacing=0.10,
-        subplot_titles=(
-            "<b>1. Transito di Potenza Complessivo sulla Dorsale 380 kV (MW)</b>", 
-            "<b>2. Dinamica della Temperatura del Conduttore (°C)</b>",
-            "<b>3. Potenza BESS + Tyrrhenian Link (MW)</b>"
-        )
-    )
+    c = st.columns(3)
+    r = m.kpi_rows(D)
+    for col, row in zip(c, r):
+        col.metric(row["Scenario"], f'{row["T max (°C)"]} °C', row["Tempo di intervento"], delta_color="off")
+    st.caption("«Tempo di intervento» = minuti dalla rampa (min 20) al superamento di 85 °C: è la finestra per redispatching.")
+    b = st.columns(3)
+    b[0].metric("Energia esportata dal Link", f'{D["link_mwh"]:.0f} MWh')
+    b[1].metric("Energia assorbita dal BESS", f'{D["soc_mwh"]:.0f} MWh')
+    b[2].metric("Eolico ridotto (curtailment)", f'{D["curt_mwh"]:.0f} MWh',
+                "costo dell'assenza del Link" if D["curt_mwh"] > 0 else None, delta_color="off")
 
-    # --- GRAFICO 1: FLUSSI DI POTENZA SULLA DORSALE ---
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen0, name="Termico Rigido", line=dict(color='#E30613', width=2, dash='dot')), row=1, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen1, name="Termico al Minimo", line=dict(color='#ff7f0e', width=2)), row=1, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_linea_scen2, name="BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3)), row=1, col=1)
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.08,
+                        subplot_titles=("Transito sulla dorsale (MW)", "Temperatura del conduttore (°C)",
+                                        "Leve di flessibilità (MW)"))
+    t = D["t"]
+    for key, y, name, dash in (("0", D["inj0"], "Termico rigido", "dot"), ("1", D["inj1"], "Termico al minimo", "solid"),
+                               ("2", D["line2"], "Con BESS + Link", "solid")):
+        fig.add_trace(go.Scatter(x=t, y=y, name=name, line=dict(color=COL[key], dash=dash, width=2)), row=1, col=1)
+    fig.add_hline(y=line_cap, line_dash="dash", line_color="gray", row=1, col=1,
+                  annotation_text="Soglia di gestione", annotation_position="top left")
+    for key, y, name, dash in (("0", D["T0"], "", "dot"), ("1", D["T1"], "", "solid"), ("2", D["T2"], "", "solid")):
+        fig.add_trace(go.Scatter(x=t, y=y, line=dict(color=COL[key], dash=dash, width=2), showlegend=False), row=2, col=1)
+    fig.add_hline(y=m.T_LIMIT, line_dash="dash", line_color="magenta", row=2, col=1,
+                  annotation_text="Limite 85 °C", annotation_position="top left")
+    fig.add_trace(go.Scatter(x=t, y=D["bess"], name="BESS", line=dict(color="#1f77b4")), row=3, col=1)
+    fig.add_trace(go.Scatter(x=t, y=D["link"], name="Tyrrhenian Link", line=dict(color="#2ca02c")), row=3, col=1)
+    fig.add_trace(go.Scatter(x=t, y=D["curt"], name="Curtailment", line=dict(color="#6b7280", dash="dot")), row=3, col=1)
+    fig.add_vline(x=m.RAMP_MIN, line_dash="dot", line_color="lightgray")
+    fig.update_xaxes(title_text="Tempo (min)", row=3, col=1)
+    fig.update_layout(height=820, template="plotly_white", margin=dict(t=50, b=10, l=10, r=10),
+                      legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center"))
+    st.plotly_chart(fig, width="stretch")
+    st.dataframe(pd.DataFrame(r), hide_index=True, width="stretch")
+    if not link_on:
+        st.warning("Senza Link il surplus oltre la soglia va ridotto (curtailment): la rete resta sicura ma si perde energia rinnovabile.")
 
-    # --- GRAFICO 2: TEMPERATURE CAVO ---
-    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen0, name="Temp - Termico Rigido", line=dict(color='#E30613', width=2, dash='dot'), showlegend=False), row=2, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen1, name="Temp - Termico al Minimo", line=dict(color='#ff7f0e', width=2), showlegend=False), row=2, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=t_scen2, name="Temp - BESS + Tyrrhenian Link", line=dict(color='#2ca02c', width=3.5), showlegend=False), row=2, col=1)
-
-    # --- GRAFICO 3: BESS + TYRRHENIAN LINK ---
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_bess_scen2, name="BESS (assorbimento)", line=dict(color='#1f77b4', width=2)), row=3, col=1)
-    fig_dash.add_trace(go.Scatter(x=minuti, y=p_link_scen2, name="Tyrrhenian Link (esportazione)", line=dict(color='#2ca02c', width=2)), row=3, col=1)
-
-    
-    # Linea limite di sicurezza (da letteratura)
-    fig_dash.add_hline(y=85.0, line_dash="dash", line_color="magenta", line_width=2,
-                        annotation_text="Limite sicurezza (85°C)", annotation_position="top left", row=2, col=1)
-
-    # Layout ottimizzato 
-    fig_dash.update_layout(
-        margin=dict(t=80, b=140, l=60, r=40),
-        height=1100,
-        template="plotly_white",
-        legend=dict(
-            orientation="h",
-            yanchor="top",
-            y=-0.12,
-            xanchor="center",
-            x=0.5
-        )
-    )
-
-    fig_dash.update_xaxes(title_text="Tempo (Minuti)", row=3, col=1)
-    fig_dash.update_yaxes(title_text="Potenza [MW]", row=1, col=1)
-    fig_dash.update_yaxes(title_text="Temperatura [°C]", row=2, col=1)
-    fig_dash.update_yaxes(title_text="Potenza [MW]", row=3, col=1)
-
-
-    # Rendering del grafico interattivo all'interno di Streamlit
-    st.plotly_chart(fig_dash, use_container_width=True)
-    
-    # KPI
-    st.markdown("### 📋 Temperatura Max del Conduttore:")
-    st.metric(
-        label="Termico Rigido",
-        value=f"{max(t_scen0):.1f} °C",
-        delta=f"+{max(t_scen0)-85.0:.1f} °C sopra il limite" if max(t_scen0) > 85 else "Sicuro",
-        delta_color="inverse" if max(t_scen0) > 85 else "normal"
-    )
-    st.metric(
-        label="Termico al minimo tecnico",
-        value=f"{max(t_scen1):.1f} °C",
-        delta=f"+{max(t_scen1)-85.0:.1f} °C sopra il limite" if max(t_scen1) > 85 else "Sicuro",
-        delta_color="inverse" if max(t_scen1) > 85 else "normal"
-    )
-    if max(t_scen2) > 85.0:
-        st.metric(
-            label="BESS + Tyrrhenian Link",
-            value=f"{max(t_scen2):.1f} °C",
-            delta=f"+{max(t_scen2) - 85.0:.1f} °C sopra il limite",
-            delta_color="inverse"
-        )
-    else:
-        st.metric(
-            label="BESS + Tyrrhenian Link",
-            value=f"{max(t_scen2):.1f} °C",
-            delta=f"-{85.0 - max(t_scen2):.1f} °C sotto il limite",
-            delta_color="off"
-        )
-
-    st.markdown("---")
-    
-# ==========================================
-# TAB 2: ASSUNZIONI E IPOTESI
-# ==========================================
+# ---------------- tab 2 ----------------
 with tab2:
-    st.header("📋 Assunzioni e Ipotesi del Modello")
-    st.markdown("""
-    In questo tab sono riportate le assunzioni, i parametri di calibrazione e i limiti del modello utilizzato.
-    """)
+    st.subheader("Quanto Link serve?")
+    st.markdown("Potenza massima che il Link deve esportare (dopo il BESS), al variare di picco eolico e soglia di gestione. "
+                "Il resto dei parametri è quello della barra laterale.")
 
-    st.markdown("---")
+    @st.cache_data
+    def grid(base: m.Params):
+        winds = np.arange(600, 1201, 100)
+        caps = np.arange(600, 1001, 50)
+        z = np.zeros((len(caps), len(winds)))
+        for i, cp in enumerate(caps):
+            for j, w in enumerate(winds):
+                d = m.dispatch(m.Params(**{**base.__dict__, "wind_peak": float(w), "line_cap": float(cp),
+                                           "link_mw": 5000.0, "link_available": True}))
+                z[i, j] = d["link"].max()
+        return winds, caps, z
 
-    # --- SEZIONE 1: MODELLO TERMICO ---
-    st.subheader("1. Modello Termico")
-    st.markdown("""
-    Il modello si basa sull'equazione del bilancio termico transitorio di un conduttore aereo, con le seguenti semplificazioni:
+    w, cps, z = grid(P)
+    hm = go.Figure(go.Heatmap(x=w, y=cps, z=z, colorscale="YlOrRd", colorbar=dict(title="MW"),
+                              hovertemplate="Eolico %{x} MW<br>Soglia %{y} MW<br>Link %{z:.0f} MW<extra></extra>"))
+    hm.add_contour(x=w, y=cps, z=z, contours=dict(start=m.Params().link_mw, end=m.Params().link_mw, coloring="none"),
+                   line=dict(color="black", width=2), showscale=False, hoverinfo="skip")
+    hm.update_layout(height=420, xaxis_title="Picco eolico (MW)", yaxis_title="Soglia di gestione (MW)",
+                     template="plotly_white", margin=dict(t=20, b=10, l=10, r=10))
+    st.plotly_chart(hm, width="stretch")
+    st.caption("La linea nera indica 1000 MW, capacità nominale di una tratta: oltre quella linea il Link da solo non basta.")
 
-    - **Equazione completa di partenza:**
-    """)
-    st.latex(r"q_c + q_r + m C_p \frac{dT_c}{dt} = q_s + I^2 R(T_c)")
-    st.markdown("""
-    1. **Termine solare nullo**: $q_s = 0$, poiché lo scenario simulato è notturno (tramonto + picco eolico).
-    2. **Linearizzazione di convezione e radiazione**: $q_c + q_r \\approx h_{eff} \\,(T_c - T_a)$, 
-       con $h_{eff}$ coefficiente di scambio termico globale.
-    3. **Resistenza costante**: $R(T_c) \\approx R$.
-    """)
+    st.subheader("Efficacia del BESS da solo")
+    bd = m.simulate(m.Params(**{**P.__dict__, "link_available": False, "bess_mw": bess_mw}))
+    st.write(f"Senza Link il BESS assorbe {bd['soc_mwh']:.0f} MWh in 100 minuti, ma restano {bd['curt_mwh']:.0f} MWh da ridurre: "
+             "la potenza dello stand-alone (circa 62 MW) è piccola rispetto al surplus (centinaia di MW).")
 
-    st.markdown("**Equazione risultante (modello del primo ordine):**")
-    st.latex(r"\tau \frac{dT_c}{dt} + T_c = T_{\text{target}}")
-    st.markdown("""
-    con:
-    - $\\tau = m C_p / h_{eff}$ → costante di tempo termica
-    - $T_{target} = T_a + \\left( I / I_{max} \\right)^2 \\Delta T_{max}$
-    """)
-
-    st.markdown("---")
-
-    # --- SEZIONE 2: PARAMETRI DI CALIBRAZIONE ---
-    st.subheader("2. Parametri di Calibrazione")
-    st.markdown("I valori utilizzati nel modello sono riportati nella tabella seguente.")
-
-    parametri = {
-        "Parametro": ["Tensione concatenata $V$", "Fattore di potenza $\\cos(\\phi)$", 
-                      "Corrente nominale $I_{max}$", "Sovratemperatura a pieno carico $\\Delta T_{max}$",
-                      "Costante di tempo $\\tau$", "Temperatura ambiente $T_a$",
-                      "Passo di integrazione $\\Delta t$"],
-        "Valore": ["380 kV", "0.9", "1600 A", "60 °C", "20 min", "25 °C (default)", "1 min"],
-        "Fonte / Note": ["Tensione standard AT", "Valore tipico per linee di trasmissione", 
-                         "Dato di progetto per conduttori binati ACSR", 
-                         "Calcolato come $T_{c,\\max} - T_a = 85 - 25$", 
-                         "letteratura", "Temperatura ambiente standard di progetto", 
-                         "Metodo di Eulero"]
-    }
-    st.table(parametri)
-
-    st.markdown("---")
-
-    # --- SEZIONE 3: VINCOLI DI RETE ---
-    st.subheader("3. Vincoli di Rete")
-    st.markdown("""
-    I seguenti vincoli sono stati imposti nel modello per riflettere la realtà operativa del sistema elettrico della regione Sardegna:
-    - **Minimo tecnico termico:** 225 MW (vincolo fisico per garantire inerzia e stabilità di rete).
-    - **Capacità di trasporto della dorsale:** 800 MW (soglia oltre la quale il sistema di gestione interviene).
-    - **Capacità BESS:** 61.9 MW (dato dalla dashboard Terna).
-    - **Capacità Tyrrhenian Link:** 1000 MW per tratta (dato di progetto).
-    """)
-
-    st.markdown("---")
-
-    # --- SEZIONE 4: IPOTESI SUGLI SCENARI ---
-    st.subheader("4. Ipotesi sugli Scenari")
-    st.markdown("""
-    - **Scenario 0 (Termico Rigido):** il termico resta al valore nominale, nessun intervento correttivo.
-    - **Scenario 1 (Termico al Minimo):** il termico scende al minimo tecnico al minuto 20.
-    - **Scenario 2 (BESS + Tyrrhenian Link):** il termico è già al minimo; BESS e Link si attivano al minuto 20 per gestire il surplus.
-    - **Dati meteo:** rampa eolica al minuto 20, solare che si azzera al tramonto.
-    - **Rumore:** aggiunto rumore gaussiano su eolico ($\\sigma=10$ MW), solare ($\\sigma=2$ MW) e temperatura ($\\sigma=0.02$ °C) per simulare fluttuazioni reali.
-    """)
-
-    st.markdown("---")
-
-    # --- SEZIONE 5: LIMITI DEL MODELLO ---
-    st.subheader("5. Limiti del Modello")
-    st.markdown("""
-    - Non include **vento**, **radiazione solare**, **altitudine** e **variazione di R con T**.
-    - La **linearizzazione** di convezione e radiazione è valida solo nell'intorno del punto di calibrazione (85 °C).
-    - Il modello è **del primo ordine**.
-    - La capacità della dorsale è una **soglia di attivazione** del sistema di gestione, non un limite fisico assoluto.
-    """)
-
-    st.markdown("---")
-
-    # --- SEZIONE 6: DISCLAIMER ---
-    st.subheader("6. Disclaimer")
-    st.info("""
-    Questo PoC è uno strumento dimostrativo. Non è affiliato a Terna S.p.A. 
-    I dati utilizzati provengono da fonti pubbliche (Terna, IEEE 738, letteratura tecnica). 
-    """)
-
-
-# ==========================================
-# TAB 3: CAPACITA' DI GENERAZIONE
-# ==========================================
+# ---------------- tab 3 ----------------
 with tab3:
-    #st.subheader("📊 Capacità di Generazione Regionale (Sardegna)")
+    st.header("Assunzioni e limiti")
+    st.subheader("Modello termico")
+    st.latex(r"\tau \frac{dT_c}{dt} + T_c = T_a + \left(\frac{I}{I_{max}}\right)^2 \frac{\Delta T_{max}}{f_v}")
     st.markdown("""
-    Analisi della **Potenza Efficiente Lorda e Netta**.""") # I dati evidenziano il divario di autoconsumo delle centrali termoelettriche e la crescente quota di accumuli stand-alone
-
-# 1. Definizione dei Dati Reali estratti dalla Dashboard Terna
-    fonti = ['Eolico', 'Fotovoltaico', 'Termoelettrico', 'Idrico', 'Accumulo Stand-alone']
-    potenza_lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
-    potenza_netta = [1193.20, 1722.09, 2174.92, 463.42, 61.90]
-    
-    totale_lordo = sum(potenza_lorda)
-    totale_netto = sum(potenza_netta)
-    autoconsumo_totale = totale_lordo - totale_netto
-
-# 2. KPI Summary Cards in alto
-    kpi1, kpi2, kpi3 = st.columns(3)
-  
-    with kpi1:
-        st.metric(label="Capacità Lorda Totale", value=f"{totale_lordo:,.2f} MW".replace(",", "."))
-    with kpi2:
-        st.metric(label="Capacità Netta Immissibile", value=f"{totale_netto:,.2f} MW".replace(",", "."), delta=f"-{autoconsumo_totale:.2f} MW Servizi Ausiliari", delta_color="inverse")
-    with kpi3:
-        quota_res = ((potenza_netta[0] + potenza_netta[1] + potenza_netta[3]) / totale_netto) * 100
-        st.metric(label="Quota Rinnovabili (sul Netto)", value=f"{quota_res:.1f} %")
-
-    st.markdown("---")
-
-    # Grafici impilati verticalmente (mobile-friendly)
-    st.subheader("Confronto Lordo vs Netta")
-    fig_confronto = go.Figure()
-    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_lorda, name='Lorda', marker_color='#1f77b4'))
-    fig_confronto.add_trace(go.Bar(x=fonti, y=potenza_netta, name='Netta', marker_color='#2ca02c'))
-    fig_confronto.update_layout(
-        barmode='group',
-        xaxis_title="Fonte",
-        yaxis_title="Potenza [MW]",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5),
-        margin=dict(l=10, r=10, t=60, b=10),
-        height=420
-    )
-    st.plotly_chart(fig_confronto, use_container_width=True)
-
-    st.subheader("Mix Energetico (Netto)")
-    fig_mix = go.Figure(data=[go.Pie(
-        labels=fonti,
-        values=potenza_netta,
-        hole=.3,
-        textinfo='percent',
-        marker=dict(colors=['#4CAF50', '#FFC107', '#FF5722', '#00BCD4', '#9C27B0'])
-    )])
-    fig_mix.update_layout(
-        showlegend=True,
-        legend=dict(orientation="h", y=-0.1, x=0),
-        margin=dict(l=10, r=10, t=30, b=10),
-        height=420
-    )
-    st.plotly_chart(fig_mix, use_container_width=True)
-
-
-
-# ==========================================
-# TAB 4: Contesto
-# ==========================================
-with tab4:
-    st.subheader("📖 Contesto")
-    st.markdown(f"""
-    La simulazione analizza il comportamento della rete di trasmissione della Sardegna durante una giornata caratterizzata dall'arrivo di un repentino fronte meteorologico in concomitanza con il tramonto solare.
-
-    * **Lo shock eolico:** Con il tramonto, la produzione fotovoltaica si azzera bruscamente, ma l'arrivo simultaneo di una perturbazione comporta un'accelerazione del vento tale da generare un picco di produzione eolica di **{wind_peak} MW**.
-    * **Il Vincolo Fisico:** Per garantire la stabilità di tensione e l'inerzia elettrica, le centrali termoelettriche non possono essere spente del tutto ma devono mantenere una generazione minima (**{thermal_min} MW**).
-    * **Il Problema:** La somma della generazione termica rigida e dell'esplosione eolica sovraccarica la dorsale di trasmissione a 380 kV in ingresso alla Stazione elettrica di Selargius.
-    * **Il Limite dell'Accumulo Stand Alone:** La Sardegna dispone di un comparto di accumulo stand alone (BESS) limitato a una capacità operativa netta di **{sg_threshold} MW**. Da solo, risulta insufficiente a contenere la congestione.
-    * **La Soluzione di Rete - il Tyrrhenian Link:** In corrispondenza della stazione elettrica di Selargius, l'energia in eccesso viene deviata sul nuovo elettrodotto sottomarino **HVDC Tyrrhenian Link** per essere esportata verso la Sicilia e la Campania.
-    * **Gestione del surplus energetico:** Il sistema di gestione interviene quando la potenza sulla dorsale supera la soglia di **{capacita_dorsale} MW**, attivando BESS e Tyrrhenian Link per riportare la temperatura sotto i limiti.
+    - Primo ordine, integrazione **esatta per passo** (target costante nel minuto). Il rumore sulla temperatura è stato tolto.
+    - Calibrato in modo che a 1600 A e 25 °C il conduttore sia a 85 °C (ΔT = 60 °C). **Semplificazione ispirata** alla logica di IEEE 738/CIGRE, non loro applicazione.
+    - Con il vento attivo, $f_v$ aumenta lo scambio (τ diminuisce): effetto qualitativo, non calibrato.
+    """)
+    st.table(pd.DataFrame({
+        "Parametro": ["V concatenata", "cos φ", "I_max", "ΔT a I_max", "τ", "Limite", "Passo"],
+        "Valore": ["380 kV", "0,9", "1600 A (≈ %.0f MW)" % m.thermal_limit_mw(), "60 °C", "20 min", "85 °C", "1 min"],
+        "Nota": ["tensione nominale", "tipico", "calibrazione", "= 85 − 25", "assunzione", "soglia di sicurezza", "esatto"]}))
+    st.subheader("Cosa rappresenta la soglia di gestione")
+    st.markdown(f"La soglia ({line_cap} MW) è un **margine di esercizio**, non il limite termico (≈ {m.thermal_limit_mw():.0f} MW).")
+    st.subheader("Scenari")
+    st.markdown("""
+    0. **Termico rigido**: il termico resta al valore iniziale.
+    1. **Termico al minimo**: dal minuto 20 scende al minimo tecnico.
+    2. **Con BESS + Link**: oltre la soglia, prima il BESS (limitato in potenza ed energia), poi il Link, poi curtailment.
+    """)
+    st.subheader("Limiti")
+    st.markdown("""
+    - Nessun flusso di carico, tensioni, reattivo, **N-1**, stabilità o inerzia: la dorsale è **un solo elemento** e le iniezioni si sommano.
+    - BESS: potenza e durata assunta, **senza** SoC iniziale né rendimento. Link: iniezione limitata, non un modello di convertitore.
+    - Scenario Link **a regime**: verifica l'entrata in servizio effettiva.
+    - Dati di capacità da fonti pubbliche Terna; ΔT e τ sono assunzioni. Strumento dimostrativo, non affiliato a Terna S.p.A.
+    - Sviluppi naturali: rete piccola in AC (es. pandapower) con N-1, serie temporali orarie, DLR calibrato, sicurezza antincendio del BESS.
     """)
 
-    st.markdown("---")
-    st.subheader("🗺️ Mappa degli asset")
+# ---------------- tab 4 ----------------
+with tab4:
+    st.subheader("Verifiche numeriche del modello")
+    rows = [{"Test": n, "Atteso": f"{a:.2f}", "Ottenuto": f"{b:.2f}", "Esito": "✅" if abs(a - b) < 0.05 else "❌"}
+            for n, a, b in m.self_checks()]
+    d0 = m.simulate(m.Params(**{**P.__dict__, "dlr": False}))
+    d1 = m.simulate(m.Params(**{**P.__dict__, "dlr": True}))
+    rows.append({"Test": "Il vento non peggiora la temperatura", "Atteso": "≤", "Ottenuto": f'{d1["T0"].max():.1f} vs {d0["T0"].max():.1f} °C',
+                 "Esito": "✅" if d1["T0"].max() <= d0["T0"].max() else "❌"})
+    bal = float(np.abs(D["inj1"] - D["line2"] - D["bess"] - D["link"] - D["curt"]).max())
+    rows.append({"Test": "Bilancio di potenza (errore max)", "Atteso": "0", "Ottenuto": f"{bal:.1e} MW", "Esito": "✅" if bal < 1e-9 else "❌"})
+    st.table(pd.DataFrame(rows))
 
-    data_asset = {
-        'Sito': ['Stazione elettrica Selargius', 'Terra Mala (Cagliari)', 'Fiumetorto (Termini Imerese)', 'Torre Tuscia Magazzeno (Battipaglia)'],
-        'Lat': [39.2600, 39.1961085, 37.9725134, 40.569476],
-        'Lon': [9.1600, 9.3295586, 13.7556869, 14.8238343],
-        'Dimensioni': [20, 10, 20, 20]
-    }
-    df_asset = pd.DataFrame(data_asset)
+# ---------------- tab 5 ----------------
+with tab5:
+    fonti = ["Eolico", "Fotovoltaico", "Termoelettrico", "Idrico", "Accumulo stand-alone"]
+    lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
+    netta = [1193.20, 1722.09, 2174.92, 463.42, 61.90]
+    fmt = lambda x: f"{x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Capacità lorda totale", fmt(sum(lorda)) + " MW")
+    k2.metric("Capacità netta immissibile", fmt(sum(netta)) + " MW", f"-{fmt(sum(lorda) - sum(netta))} MW servizi ausiliari", delta_color="inverse")
+    k3.metric("Quota rinnovabili (netto)", f"{(netta[0] + netta[1] + netta[3]) / sum(netta) * 100:.1f} %".replace(".", ","))
+    f2 = go.Figure([go.Bar(x=fonti, y=lorda, name="Lorda", marker_color="#1f77b4"),
+                    go.Bar(x=fonti, y=netta, name="Netta", marker_color="#2ca02c")])
+    f2.update_layout(barmode="group", yaxis_title="MW", height=380, margin=dict(t=30, b=10, l=10, r=10),
+                     legend=dict(orientation="h", y=1.08))
+    st.plotly_chart(f2, width="stretch")
+    f3 = go.Figure(go.Pie(labels=fonti, values=netta, hole=.3, textinfo="percent"))
+    f3.update_layout(height=380, margin=dict(t=10, b=10, l=10, r=10), legend=dict(orientation="h", y=-0.1))
+    st.plotly_chart(f3, width="stretch")
+    st.caption("Dati: dashboard Terna (potenza efficiente), come estratti dall'autore.")
 
-    fig_map = go.Figure()
-
-    fig_map.add_trace(go.Scattermapbox(
-        lat=[40.8400, 39.2600], lon=[8.3200, 9.1600],
-        mode='lines+markers',
-        line=dict(width=4, color='#ff7f0e'),
-        name='Dorsale Elettrica 380 kV',
-        hoverinfo='text',
-        text='Dorsale Principale di Trasmissione Sarda'
-    ))
-
-    fig_map.add_trace(go.Scattermapbox(
-        lat=[39.2600, 39.1961085, 37.9725134, 40.569476],
-        lon=[9.1600, 9.3295586, 13.7556869, 14.8238343],
-        mode='lines',
-        line=dict(width=4, color='#2ca02c'),
-        name='Tyrrhenian Link',
-        hoverinfo='text',
-        text='Collegamento in Corrente Continua'
-    ))
-
-    fig_map.add_trace(go.Scattermapbox(
-        lat=df_asset['Lat'], lon=df_asset['Lon'],
-        mode='markers',
-        marker=go.scattermapbox.Marker(
-            size=df_asset['Dimensioni'],
-            color=['#d62728', '#d62728', '#d62728', '#d62728'],
-            opacity=0.9
-        ),
-        text=df_asset['Sito'],
-        hoverinfo='text',
-        name='Infrastrutture Chiave'
-    ))
-
-    fig_map.update_layout(
-        mapbox=dict(
-            style="open-street-map",
-            center=dict(lat=40.2, lon=10.5),
-            zoom=5.5
-        ),
-        margin=dict(l=0, r=0, t=0, b=0),
-        height=500,
-        showlegend=True,
-        legend=dict(
-            x=0.02, y=0.98,
-            xanchor="left", yanchor="top",
-            bgcolor="rgba(0, 0, 0, 0)",
-            font=dict(color="blue")
-        )
-    )
-    st.plotly_chart(fig_map, use_container_width=True)
-
-
-
+# ---------------- tab 6 ----------------
+with tab6:
+    st.markdown(f"""
+    Al tramonto il fotovoltaico si azzera mentre un fronte di vento porta l'eolico a **{wind_peak} MW**. Il termico non può scendere sotto il
+    minimo tecnico (**{thermal_min} MW**, servizi di sicurezza). La somma carica la dorsale a 380 kV verso la stazione di Selargius.
+    Il BESS stand-alone ({bess_mw:.1f} MW) da solo non basta; il **Tyrrhenian Link** esporta il surplus verso Sicilia e Campania.
+    """)
+    sites = pd.DataFrame({"Sito": ["Selargius (stazione)", "Terra Mala (Cagliari)", "Fiumetorto (Termini Imerese)", "Battipaglia"],
+                          "lat": [39.26, 39.1961, 37.9725, 40.5695], "lon": [9.16, 9.3296, 13.7557, 14.8238]})
+    mp = go.Figure()
+    mp.add_trace(go.Scattermap(lat=[40.84, 39.26], lon=[8.32, 9.16], mode="lines+markers", line=dict(width=4, color="#ff7f0e"),
+                               name="Dorsale 380 kV (schematica)"))
+    mp.add_trace(go.Scattermap(lat=sites.lat, lon=sites.lon, mode="lines", line=dict(width=4, color="#2ca02c"),
+                               name="Tyrrhenian Link (schematico)"))
+    mp.add_trace(go.Scattermap(lat=sites.lat, lon=sites.lon, mode="markers", marker=dict(size=14, color="#d62728"),
+                               text=sites.Sito, hoverinfo="text", name="Siti"))
+    mp.update_layout(map=dict(style="open-street-map", center=dict(lat=39.6, lon=11.6), zoom=5),
+                     margin=dict(l=0, r=0, t=0, b=0), height=480,
+                     legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)"))
+    st.plotly_chart(mp, width="stretch")
+    st.caption("Tracciati schematici, non i percorsi reali.")

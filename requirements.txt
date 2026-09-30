@@ -1,5 +1,5 @@
-streamlit
+streamlit>=1.50
 numpy
 pandas
-plotly>=5.18.0,<6.0.0
+plotly>=5.24
 segno
