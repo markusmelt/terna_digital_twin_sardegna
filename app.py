@@ -49,7 +49,7 @@ P = m.Params(wind_peak=wind_peak, thermal_nominal=thermal_nominal, thermal_min=t
              t_amb=t_amb, dlr=dlr, dlr_k=k)
 D = m.simulate(P)
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
     ["📊 Simulazione", "📋 Assunzioni", "✅ Verifiche", "⚡ Capacità Sardegna", "🗺️ Contesto"])
 
 # ---------------- tab 1 ----------------
