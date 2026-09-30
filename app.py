@@ -29,14 +29,14 @@ line_cap = sb.slider("Soglia di gestione della dorsale (MW)", 600, 1100, 800, 10
 sb.subheader("Flessibilità")
 bess_mw = sb.slider("BESS stand-alone, potenza (MW)", 0.0, 61.9, 61.9, 5.0)
 bess_h = sb.slider("BESS, durata a potenza nominale (h)", 0.5, 4.0, 2.0, 0.5,
-                   help="Assunzione")
+                   help="Assunzione: il dato Terna riguarda la potenza, non l'energia.")
 link_on = sb.toggle("Tyrrhenian Link disponibile (a regime)", True,
                     help="Scenario a regime: verifica lo stato di avanzamento dell'opera.")
 link_mw = sb.slider("Capacità Link (MW)", 0, 1000, 1000, 50, disabled=not link_on)
 sb.subheader("Ambiente")
-t_amb = sb.slider("Temperatura ambiente (°C)", 0, 50.0, 25.0, 1.0)
+t_amb = sb.slider("Temperatura ambiente (°C)", -5.0, 50.0, 25.0, 1.0)
 dlr = sb.toggle("Raffreddamento da vento (DLR illustrativo)", False,
-                help="Il vento che produce i MW raffredda anche il conduttore. Modello qualitativo (non IEEE 738).")
+                help="Il vento che produce i MW raffredda anche il conduttore. Modello qualitativo, non IEEE 738.")
 k = sb.slider("Quota di vento efficace sul conduttore", 0.1, 0.6, 0.3, 0.05, disabled=not dlr)
 sb.markdown("---")
 sb.subheader("📱 Link al progetto")
@@ -151,6 +151,7 @@ with tab3:
     - BESS: potenza e durata assunta, **senza** SoC iniziale né rendimento. Link: iniezione limitata, non un modello di convertitore.
     - Scenario Link **a regime**: verifica l'entrata in servizio effettiva.
     - Dati di capacità da fonti pubbliche Terna; ΔT e τ sono assunzioni. Strumento dimostrativo, non affiliato a Terna S.p.A.
+    - Sviluppi naturali: rete piccola in AC (es. pandapower) con N-1, serie temporali orarie, DLR calibrato, sicurezza antincendio del BESS.
     """)
 
 # ---------------- tab 4 ----------------
@@ -184,7 +185,7 @@ with tab5:
     f3 = go.Figure(go.Pie(labels=fonti, values=netta, hole=.3, textinfo="percent"))
     f3.update_layout(height=380, margin=dict(t=10, b=10, l=10, r=10), legend=dict(orientation="h", y=-0.1))
     st.plotly_chart(f3, width="stretch")
-    st.caption("Dati: dashboard Terna (potenza efficiente).")
+    st.caption("Dati: dashboard Terna (potenza efficiente), come estratti dall'autore.")
 
 # ---------------- tab 6 ----------------
 with tab6:
@@ -206,4 +207,4 @@ with tab6:
                      margin=dict(l=0, r=0, t=0, b=0), height=480,
                      legend=dict(x=0.01, y=0.99, bgcolor="rgba(255,255,255,0.8)"))
     st.plotly_chart(mp, width="stretch")
-    st.caption("Tracciati schematici")
+    st.caption("Tracciati schematici, non i percorsi reali.")
