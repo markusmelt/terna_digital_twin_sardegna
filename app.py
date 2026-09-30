@@ -126,7 +126,7 @@ with tab2:
        $\Delta T_{max} = I_{max}^2 R / h_{ref} = 60$ °C. Con $f(V) = h_{eff}(V)/h_{ref}$:
     """)
     st.latex(r"T_{target} = T_a + \left(\frac{I}{I_{max}}\right)^2 \frac{\Delta T_{max}}{f(V)},\quad"
-             r"\tau = \frac{\tau_0}{f(V)},\quad"
+             r"\tau = \frac{\tau_0}{f(V)},\quad "
              r"f(V) = (1-s) + s\left(\frac{\max(V,V_0)}{V_0}\right)^{0,6}")
     st.markdown(r"""
     dove $s$ è la quota di scambio dovuta alla convezione a $V_0$ (assunta 0,5). Senza vento utile ($V \le V_0$) si ha $f = 1$.
