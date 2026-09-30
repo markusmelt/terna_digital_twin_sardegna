@@ -164,6 +164,15 @@ with tab3:
         "Parametro": ["V concatenata", "cos φ", "I_max", "ΔT_max (V = V_0)", "τ_0 (V = V_0)", "V_0", "Esponente di f", "Limite", "Passo"],
         "Valore": ["380 kV", "0,9", "1600 A (≈ %.0f MW)" % m.thermal_limit_mw(), "60 °C", "20 min", "0,6 m/s", "0,5", "85 °C", "1 min"],
         "Origine": ["nominale", "tipico", "ipotesi di scenario (calibrazione)","= 85 − 25", "assunzione", "condizione convenzionale", "assunzione (ordine di grandezza)", "soglia di sicurezza", "esatto"]}))
+    st.subheader("Cosa rappresenta il tratto modellato")
+    st.markdown(f"""
+    Un **tratto equivalente a capacità ridotta**, non un tratto specifico della rete sarda: la sua capacità è un'**ipotesi di scenario**.
+    - **Perché 1600 A (≈ {m.thermal_limit_mw():.0f} MW)?** È un valore tondo vicino alla corrente nominale del conduttore standard Terna
+      (1500 A per fase, circa 1000 MVA per terna, Terna UX LAE 08), scelto in modo che il picco eolico da {int(P.wind_peak)} MW la superi
+      e lo scenario abbia un transitorio da studiare. È una scelta di scenario, non una misura.
+    - **Cosa non è:** la portata termica del conduttore reale, che è più alta della corrente nominale (portata nominale e portata termica non coincidono).
+    - **Con dati reali** (conduttore, condizioni di posa, rating del tratto) si ricalibrano $I_{{max}}$ e $\\tau_0$.
+    """)
     st.subheader("Cosa rappresenta la soglia di gestione")
     st.markdown(f"La soglia ({line_cap} MW) è un **margine di esercizio**, non il limite termico (≈ {m.thermal_limit_mw():.0f} MW).")
     st.subheader("Scenari")
