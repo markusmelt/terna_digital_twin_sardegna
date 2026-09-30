@@ -141,7 +141,8 @@ with tab3:
     2. **Convezione e irraggiamento linearizzati** rispetto alla temperatura dell'aria: $q_c + q_r \approx h_{eff}\,(T_c - T_a)$.
     3. **Vento:** aumenta lo scambio secondo $f(V) = \left(\max(V, V_0)/V_0\right)^{1/2}$, cioè $h_{eff} = f(V)\,h_{ref}$.
        Con $V \le V_0$ = 0,6 m/s si ha $f = 1$ (caso conservativo). L'esponente 1/2 è un ordine di grandezza per la convezione forzata su un cilindro;
-       trascura irraggiamento e convezione naturale. Il vento è un **dato di input in m/s**, non è legato alla produzione eolica.
+       il fattore scala **tutto** lo scambio, irraggiamento compreso, che in realtà non dipende dal vento: il beneficio del vento è quindi **leggermente sovrastimato**
+       (temperature con vento un po' ottimistiche). Il vento è un **dato di input in m/s**, non è legato alla produzione eolica.
     4. **Resistenza costante:** $R(T_c) \approx R$. Trascura circa +0,4 %/°C, quindi **sottostima** il riscaldamento a temperature alte.
     5. **Risultato:** con $C = m C_p$ si ottiene un modello del primo ordine.
     """)
@@ -150,7 +151,8 @@ with tab3:
              r"\tau\,\frac{dT_c}{dt} + T_c = T_a + \frac{I^2 R}{f(V)\,h_{ref}},\qquad \tau=\frac{C}{f(V)\,h_{ref}}")
     st.markdown(r"""
     6. **Calibrazione su un solo punto**, senza dati di catalogo del conduttore: a $I_{max}$ = 1600 A, $T_a$ = 25 °C e vento $V_0$ ($f = 1$) il conduttore è a 85 °C,
-       quindi $\Delta T_{max} = I_{max}^2 R / h_{ref} = 60$ °C. Da cui:
+       quindi $\Delta T_{max} = I_{max}^2 R / h_{ref} = 60$ °C. Questo punto è un'**ipotesi di scenario**, che rappresenta un tratto con portata termica ridotta,
+       non la portata di una terna standard. Con i dati reali del tratto si ricalibrano due parametri ($I_{max}$ e $\tau_0$). Da cui:
     """)
     st.latex(r"T_{target} = T_a + \left(\frac{I}{I_{max}}\right)^2 \frac{\Delta T_{max}}{f(V)},\quad \tau = \frac{\tau_0}{f(V)}")
     st.markdown(r"""
@@ -161,7 +163,7 @@ with tab3:
     st.table(pd.DataFrame({
         "Parametro": ["V concatenata", "cos φ", "I_max", "ΔT_max (V = V_0)", "τ_0 (V = V_0)", "V_0", "Esponente di f", "Limite", "Passo"],
         "Valore": ["380 kV", "0,9", "1600 A (≈ %.0f MW)" % m.thermal_limit_mw(), "60 °C", "20 min", "0,6 m/s", "0,5", "85 °C", "1 min"],
-        "Origine": ["nominale", "tipico", "calibrazione", "= 85 − 25", "assunzione", "condizione convenzionale", "assunzione (ordine di grandezza)", "soglia di sicurezza", "esatto"]}))
+        "Origine": ["nominale", "tipico", "ipotesi di scenario (calibrazione)","= 85 − 25", "assunzione", "condizione convenzionale", "assunzione (ordine di grandezza)", "soglia di sicurezza", "esatto"]}))
     st.subheader("Cosa rappresenta la soglia di gestione")
     st.markdown(f"La soglia ({line_cap} MW) è un **margine di esercizio**, non il limite termico (≈ {m.thermal_limit_mw():.0f} MW).")
     st.subheader("Scenari")
@@ -174,6 +176,10 @@ with tab3:
     st.markdown("""
     - Nessun flusso di carico, tensioni, reattivo, **N-1**, stabilità o inerzia: la dorsale è **un solo elemento** e le iniezioni si sommano.
     - **Vento:** unico input in m/s, uniforme lungo la linea e indipendente dalla produzione eolica, perché i parchi sono in punti diversi dal tratto di trasporto. Il vento rilevante è quello sulla **campata peggio raffreddata** (componente perpendicolare), non quello dei parchi: per calibrarlo servirebbero campagne anemometriche lungo il tracciato o misure sulla linea.
+    - **Calibrazione a un punto:** 1600 A → 85 °C è un'ipotesi di scenario, non un dato di catalogo. Il conduttore standard Terna (Ø 31,5 mm, fascio trinato) ha una corrente
+      nominale di 1500 A per fase (Terna, UX LAE 08), che è un valore di progetto con margini, non il punto in cui il conduttore raggiunge 85 °C: portata nominale e portata termica non coincidono
+      (ed è il tema del dynamic line rating). Con i dati reali del tratto il modello va ricalibrato.
+    - **Sole:** il modello è notturno ($q_s = 0$); al tramonto un po' di irraggiamento solare c'è ancora e scalderebbe di più.
     - BESS: potenza e durata assunta, **senza** SoC iniziale né rendimento. Link: iniezione limitata, non un modello di convertitore.
     - Scenario Link **a regime**: verifica l'entrata in servizio effettiva.
     - Dati di capacità da fonti pubbliche Terna; ΔT e τ sono assunzioni. Strumento dimostrativo, non affiliato a Terna S.p.A.
