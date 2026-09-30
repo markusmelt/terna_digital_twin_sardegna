@@ -35,9 +35,9 @@ link_on = sb.toggle("Tyrrhenian Link disponibile (a regime)", True,
 link_mw = sb.slider("Capacità Link (MW)", 0, 1000, 1000, 50, disabled=not link_on)
 sb.subheader("Ambiente")
 t_amb = sb.slider("Temperatura ambiente (°C)", -5.0, 50.0, 25.0, 1.0)
-dlr = sb.toggle("Raffreddamento da vento (DLR illustrativo)", False,
-                help="Il vento che produce i MW raffredda anche il conduttore. Modello qualitativo, non IEEE 738.")
-k = sb.slider("Quota di vento efficace sul conduttore", 0.1, 0.6, 0.3, 0.05, disabled=not dlr)
+wind_ms = sb.slider("Vento sul conduttore (m/s)", 0.0, 10.0, 0.6, 0.1,
+                    help="Componente perpendicolare alla linea. 0,6 m/s è la condizione convenzionale di calibrazione (caso conservativo).")
+sb.caption(f"= {wind_ms * 3.6:.0f} km/h · fattore di scambio f = {m.wind_factor(wind_ms):.2f}")
 sb.markdown("---")
 sb.subheader("📱 Link al progetto")
 buf = io.BytesIO()
@@ -46,58 +46,86 @@ sb.image(buf.getvalue(), caption="Apri la web-app", width="stretch")
 
 P = m.Params(wind_peak=wind_peak, thermal_nominal=thermal_nominal, thermal_min=thermal_min, line_cap=line_cap,
              bess_mw=bess_mw, bess_mwh=bess_mw * bess_h, link_mw=link_mw, link_available=link_on,
-             t_amb=t_amb, dlr=dlr, dlr_k=k)
+             t_amb=t_amb, wind_ms=wind_ms)
 D = m.simulate(P)
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["📊 Simulazione", "📋 Assunzioni", "✅ Verifiche", "⚡ Capacità Sardegna", "🗺️ Contesto"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+    ["📊 Simulazione", "🔍 Sensibilità", "📋 Assunzioni", "✅ Verifiche", "⚡ Capacità Sardegna", "🗺️ Contesto"])
 
 # ---------------- tab 1 ----------------
-# SIMULAZIONE
-# ---------------------------------------
 with tab1:
-  c = st.columns(3)
-  r = m.kpi_rows(D)
-  for col, row in zip(c, r):
-      col.metric(row["Scenario"], f'{row["T max (°C)"]} °C', row["Tempo di intervento"], delta_color="off")
-  st.caption("«Tempo di intervento» = minuti dalla rampa (min 20) al superamento di 85 °C: è la finestra per redispatching.")
-  b = st.columns(3)
-  b[0].metric("Energia esportata dal Link", f'{D["link_mwh"]:.0f} MWh')
-  b[1].metric("Energia assorbita dal BESS", f'{D["soc_mwh"]:.0f} MWh')
-  b[2].metric("Eolico ridotto (curtailment)", f'{D["curt_mwh"]:.0f} MWh',
-              "costo dell'assenza del Link" if D["curt_mwh"] > 0 else None, delta_color="off")
+    c = st.columns(3)
+    r = m.kpi_rows(D)
+    for col, row in zip(c, r):
+        col.metric(row["Scenario"], f'{row["T max (°C)"]} °C', row["Tempo di intervento"], delta_color="off")
+    st.caption("«Tempo di intervento» = minuti dalla rampa (min 20) al superamento di 85 °C: è la finestra per redispatching.")
+    b = st.columns(3)
+    b[0].metric("Energia esportata dal Link", f'{D["link_mwh"]:.0f} MWh')
+    b[1].metric("Energia assorbita dal BESS", f'{D["soc_mwh"]:.0f} MWh')
+    b[2].metric("Eolico ridotto (curtailment)", f'{D["curt_mwh"]:.0f} MWh',
+                "costo dell'assenza del Link" if D["curt_mwh"] > 0 else None, delta_color="off")
 
-  fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.08,
-                      subplot_titles=("Transito sulla dorsale (MW)", "Temperatura del conduttore (°C)",
-                                      "Leve di flessibilità (MW)"))
-  t = D["t"]
-  for key, y, name, dash in (("0", D["inj0"], "Termico rigido", "dot"), ("1", D["inj1"], "Termico al minimo", "solid"),
-                             ("2", D["line2"], "Con BESS + Link", "solid")):
-      fig.add_trace(go.Scatter(x=t, y=y, name=name, line=dict(color=COL[key], dash=dash, width=2)), row=1, col=1)
-  fig.add_hline(y=line_cap, line_dash="dash", line_color="gray", row=1, col=1,
-                annotation_text="Soglia di gestione", annotation_position="top left")
-  for key, y, name, dash in (("0", D["T0"], "", "dot"), ("1", D["T1"], "", "solid"), ("2", D["T2"], "", "solid")):
-      fig.add_trace(go.Scatter(x=t, y=y, line=dict(color=COL[key], dash=dash, width=2), showlegend=False), row=2, col=1)
-  fig.add_hline(y=m.T_LIMIT, line_dash="dash", line_color="magenta", row=2, col=1,
-                annotation_text="Limite 85 °C", annotation_position="top left")
-  fig.add_trace(go.Scatter(x=t, y=D["bess"], name="BESS", line=dict(color="#1f77b4")), row=3, col=1)
-  fig.add_trace(go.Scatter(x=t, y=D["link"], name="Tyrrhenian Link", line=dict(color="#9467bd")), row=3, col=1)
-  fig.add_trace(go.Scatter(x=t, y=D["curt"], name="Curtailment", line=dict(color="#6b7280", dash="dot"),
-                           showlegend=bool(D["curt"].max() > 0)), row=3, col=1)
-  fig.add_vline(x=m.RAMP_MIN, line_dash="dot", line_color="lightgray")
-  fig.update_xaxes(title_text="Tempo (min)", row=3, col=1)
-  fig.update_layout(height=820, template="plotly_white", margin=dict(t=50, b=10, l=10, r=10),
-                    legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center"))
-  st.plotly_chart(fig, width="stretch")
-  st.dataframe(pd.DataFrame(r), hide_index=True, width="stretch")
-  if not link_on:
-      st.warning("Senza Link il surplus oltre la soglia va ridotto (curtailment): la rete resta sicura ma si perde energia rinnovabile.")
-
+    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.08,
+                        subplot_titles=("Transito sulla dorsale (MW)", "Temperatura del conduttore (°C)",
+                                        "Leve di flessibilità (MW)"))
+    t = D["t"]
+    for key, y, name, dash in (("0", D["inj0"], "Termico rigido", "dot"), ("1", D["inj1"], "Termico al minimo", "solid"),
+                               ("2", D["line2"], "Con BESS + Link", "solid")):
+        fig.add_trace(go.Scatter(x=t, y=y, name=name, line=dict(color=COL[key], dash=dash, width=2)), row=1, col=1)
+    fig.add_hline(y=line_cap, line_dash="dash", line_color="gray", row=1, col=1,
+                  annotation_text="Soglia di gestione", annotation_position="top left")
+    for key, y, name, dash in (("0", D["T0"], "", "dot"), ("1", D["T1"], "", "solid"), ("2", D["T2"], "", "solid")):
+        fig.add_trace(go.Scatter(x=t, y=y, line=dict(color=COL[key], dash=dash, width=2), showlegend=False), row=2, col=1)
+    fig.add_hline(y=m.T_LIMIT, line_dash="dash", line_color="magenta", row=2, col=1,
+                  annotation_text="Limite 85 °C", annotation_position="top left")
+    fig.add_trace(go.Scatter(x=t, y=D["bess"], name="BESS", line=dict(color="#1f77b4")), row=3, col=1)
+    fig.add_trace(go.Scatter(x=t, y=D["link"], name="Tyrrhenian Link", line=dict(color="#9467bd")), row=3, col=1)
+    fig.add_trace(go.Scatter(x=t, y=D["curt"], name="Curtailment", line=dict(color="#6b7280", dash="dot"),
+                             showlegend=bool(D["curt"].max() > 0)), row=3, col=1)
+    fig.add_vline(x=m.RAMP_MIN, line_dash="dot", line_color="lightgray")
+    fig.update_xaxes(title_text="Tempo (min)", row=3, col=1)
+    fig.update_layout(height=820, template="plotly_white", margin=dict(t=50, b=10, l=10, r=10),
+                      legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center"))
+    st.plotly_chart(fig, width="stretch")
+    st.dataframe(pd.DataFrame(r), hide_index=True, width="stretch")
+    if not link_on:
+        st.warning("Senza Link il surplus oltre la soglia va ridotto (curtailment): la rete resta sicura ma si perde energia rinnovabile.")
 
 # ---------------- tab 2 ----------------
-# ASSUNZIONI
-# ---------------------------------------
 with tab2:
+    st.subheader("Quanto Link serve?")
+    st.markdown("Potenza massima che il Link deve esportare (dopo il BESS), al variare di picco eolico e soglia di gestione. "
+                "Il resto dei parametri è quello della barra laterale.")
+
+    @st.cache_data
+    def grid(base: m.Params):
+        winds = np.arange(600, 1201, 100)
+        caps = np.arange(600, 1001, 50)
+        z = np.zeros((len(caps), len(winds)))
+        for i, cp in enumerate(caps):
+            for j, w in enumerate(winds):
+                d = m.dispatch(m.Params(**{**base.__dict__, "wind_peak": float(w), "line_cap": float(cp),
+                                           "link_mw": 5000.0, "link_available": True}))
+                z[i, j] = d["link"].max()
+        return winds, caps, z
+
+    w, cps, z = grid(P)
+    hm = go.Figure(go.Heatmap(x=w, y=cps, z=z, colorscale="YlOrRd", colorbar=dict(title="MW"),
+                              hovertemplate="Eolico %{x} MW<br>Soglia %{y} MW<br>Link %{z:.0f} MW<extra></extra>"))
+    hm.add_contour(x=w, y=cps, z=z, contours=dict(start=m.Params().link_mw, end=m.Params().link_mw, coloring="none"),
+                   line=dict(color="black", width=2), showscale=False, hoverinfo="skip")
+    hm.update_layout(height=420, xaxis_title="Picco eolico (MW)", yaxis_title="Soglia di gestione (MW)",
+                     template="plotly_white", margin=dict(t=20, b=10, l=10, r=10))
+    st.plotly_chart(hm, width="stretch")
+    st.caption("La linea nera indica 1000 MW, capacità nominale di una tratta: oltre quella linea il Link da solo non basta.")
+
+    st.subheader("Efficacia del BESS da solo")
+    bd = m.simulate(m.Params(**{**P.__dict__, "link_available": False, "bess_mw": bess_mw}))
+    st.write(f"Senza Link il BESS assorbe {bd['soc_mwh']:.0f} MWh in 100 minuti, ma restano {bd['curt_mwh']:.0f} MWh da ridurre: "
+             "la potenza dello stand-alone (circa 62 MW) è piccola rispetto al surplus (centinaia di MW).")
+
+# ---------------- tab 3 ----------------
+with tab3:
     st.header("Assunzioni e limiti")
     st.subheader("Modello termico: dal bilancio di potenza per unità di lunghezza")
     st.markdown("Punto di partenza: bilancio termico transitorio del conduttore, in **W/m** (forma di IEEE 738):")
@@ -110,40 +138,30 @@ with tab2:
     **Semplificazioni, in ordine:**
 
     1. **Notte:** $q_s = 0$ (tramonto in poi).
-    2. **Irraggiamento linearizzato** attorno al punto di lavoro:
-       $q_r = \pi D \varepsilon \sigma\left[(T_c+273)^4-(T_a+273)^4\right] \approx h_r\,(T_c - T_a)$.
-    3. **Convezione forzata:** $q_c = h_c(V)\,(T_c - T_a)$ con $h_c \propto V^{0,6}$ (esponente della forma ad alto vento di IEEE 738),
-       con un minimo per la convezione naturale. Insieme: $q_c + q_r = h_{eff}(V)\,(T_c - T_a)$, con $h_{eff} = h_r + h_c(V)$.
+    2. **Convezione e irraggiamento linearizzati** rispetto alla temperatura dell'aria: $q_c + q_r \approx h_{eff}\,(T_c - T_a)$.
+    3. **Vento:** aumenta lo scambio secondo $f(V) = \left(\max(V, V_0)/V_0\right)^{1/2}$, cioè $h_{eff} = f(V)\,h_{ref}$.
+       Con $V \le V_0$ = 0,6 m/s si ha $f = 1$ (caso conservativo). L'esponente 1/2 è un ordine di grandezza per la convezione forzata su un cilindro;
+       trascura irraggiamento e convezione naturale. Il vento è un **dato di input in m/s**, non è legato alla produzione eolica.
     4. **Resistenza costante:** $R(T_c) \approx R$. Trascura circa +0,4 %/°C, quindi **sottostima** il riscaldamento a temperature alte.
     5. **Risultato:** con $C = m C_p$ si ottiene un modello del primo ordine.
     """)
-    st.latex(r"C\,\frac{dT_c}{dt} + h_{eff}(V)\,(T_c - T_a) = I^2 R"
+    st.latex(r"C\,\frac{dT_c}{dt} + f(V)\,h_{ref}\,(T_c - T_a) = I^2 R"
              r"\;\;\Rightarrow\;\;"
-             r"\tau(V)\,\frac{dT_c}{dt} + T_c = T_a + \frac{I^2 R}{h_{eff}(V)},\qquad \tau(V)=\frac{C}{h_{eff}(V)}")
+             r"\tau\,\frac{dT_c}{dt} + T_c = T_a + \frac{I^2 R}{f(V)\,h_{ref}},\qquad \tau=\frac{C}{f(V)\,h_{ref}}")
     st.markdown(r"""
-    6. **Calibrazione su un solo punto**, senza dati di catalogo del conduttore: a $I_{max}$ = 1600 A, $T_a$ = 25 °C e vento di riferimento
-       $V_0$ = 0,6 m/s (condizione convenzionale di portata statica) il conduttore è a 85 °C, quindi
-       $\Delta T_{max} = I_{max}^2 R / h_{ref} = 60$ °C. Con $f(V) = h_{eff}(V)/h_{ref}$:
+    6. **Calibrazione su un solo punto**, senza dati di catalogo del conduttore: a $I_{max}$ = 1600 A, $T_a$ = 25 °C e vento $V_0$ ($f = 1$) il conduttore è a 85 °C,
+       quindi $\Delta T_{max} = I_{max}^2 R / h_{ref} = 60$ °C. Da cui:
     """)
-    st.latex(r"T_{target} = T_a + \left(\frac{I}{I_{max}}\right)^2 \frac{\Delta T_{max}}{f(V)},\quad"
-             r"\tau = \frac{\tau_0}{f(V)},\quad "
-             r"f(V) = (1-s) + s\left(\frac{\max(V,V_0)}{V_0}\right)^{0,6}")
+    st.latex(r"T_{target} = T_a + \left(\frac{I}{I_{max}}\right)^2 \frac{\Delta T_{max}}{f(V)},\quad \tau = \frac{\tau_0}{f(V)}")
     st.markdown(r"""
-    dove $s$ è la quota di scambio dovuta alla convezione a $V_0$ (assunta 0,5). Senza vento utile ($V \le V_0$) si ha $f = 1$.
-
-    7. **Velocità del vento dalla produzione eolica** (proxy grossolano): $V = k\,V_{rif}\,(P_{eol}/P_{rif})^{1/3}$, dalla legge cubica della potenza
-       eolica. Il fattore $k$ tiene conto di angolo di incidenza, schermatura e distanza tra parchi e linea: è un'assunzione, non una misura.
-
     **Integrazione:** target costante nel minuto, quindi soluzione esatta per passo:
     $T_{j+1} = T_{target} + (T_j - T_{target})\,e^{-\Delta t/\tau}$.
     Le temperature assolute sono **indicative** (calibrazione su un punto); il confronto **tra scenari** è più robusto.
     """)
     st.table(pd.DataFrame({
-        "Parametro": ["V concatenata", "cos φ", "I_max", "ΔT_max a I_max", "V_0", "τ_0 (a V_0)", "s", "k", "V_rif, P_rif", "Limite", "Passo"],
-        "Valore": ["380 kV", "0,9", "1600 A (≈ %.0f MW)" % m.thermal_limit_mw(), "60 °C", "0,6 m/s", "20 min", "0,5",
-                   "0,3 (regolabile)", "12 m/s, 1200 MW", "85 °C", "1 min"],
-        "Origine": ["nominale", "tipico", "calibrazione", "= 85 − 25", "convenzione IEEE 738", "assunzione", "assunzione",
-                    "assunzione", "assunzione", "soglia di sicurezza", "esatto"]}))
+        "Parametro": ["V concatenata", "cos φ", "I_max", "ΔT_max (V = V_0)", "τ_0 (V = V_0)", "V_0", "Esponente di f", "Limite", "Passo"],
+        "Valore": ["380 kV", "0,9", "1600 A (≈ %.0f MW)" % m.thermal_limit_mw(), "60 °C", "20 min", "0,6 m/s", "0,5", "85 °C", "1 min"],
+        "Origine": ["nominale", "tipico", "calibrazione", "= 85 − 25", "assunzione", "condizione convenzionale", "assunzione (ordine di grandezza)", "soglia di sicurezza", "esatto"]}))
     st.subheader("Cosa rappresenta la soglia di gestione")
     st.markdown(f"La soglia ({line_cap} MW) è un **margine di esercizio**, non il limite termico (≈ {m.thermal_limit_mw():.0f} MW).")
     st.subheader("Scenari")
@@ -155,31 +173,28 @@ with tab2:
     st.subheader("Limiti")
     st.markdown("""
     - Nessun flusso di carico, tensioni, reattivo, **N-1**, stabilità o inerzia: la dorsale è **un solo elemento** e le iniezioni si sommano.
+    - **Vento:** unico input in m/s, uniforme lungo la linea e indipendente dalla produzione eolica, perché i parchi sono in punti diversi dal tratto di trasporto. Il vento rilevante è quello sulla **campata peggio raffreddata** (componente perpendicolare), non quello dei parchi: per calibrarlo servirebbero campagne anemometriche lungo il tracciato o misure sulla linea.
     - BESS: potenza e durata assunta, **senza** SoC iniziale né rendimento. Link: iniezione limitata, non un modello di convertitore.
     - Scenario Link **a regime**: verifica l'entrata in servizio effettiva.
     - Dati di capacità da fonti pubbliche Terna; ΔT e τ sono assunzioni. Strumento dimostrativo, non affiliato a Terna S.p.A.
     - Sviluppi naturali: rete piccola in AC (es. pandapower) con N-1, serie temporali orarie, DLR calibrato, sicurezza antincendio del BESS.
     """)
 
-# ---------------- tab 3 ----------------
-# VERIFICHE NUMERICHE
-# ---------------------------------------
-with tab3:
+# ---------------- tab 4 ----------------
+with tab4:
     st.subheader("Verifiche numeriche del modello")
     rows = [{"Test": n, "Atteso": f"{a:.2f}", "Ottenuto": f"{b:.2f}", "Esito": "✅" if abs(a - b) < 0.05 else "❌"}
             for n, a, b in m.self_checks()]
-    d0 = m.simulate(m.Params(**{**P.__dict__, "dlr": False}))
-    d1 = m.simulate(m.Params(**{**P.__dict__, "dlr": True}))
+    d0 = m.simulate(m.Params(**{**P.__dict__, "wind_ms": 0.6}))
+    d1 = m.simulate(m.Params(**{**P.__dict__, "wind_ms": 3.0}))
     rows.append({"Test": "Il vento non peggiora la temperatura", "Atteso": "≤", "Ottenuto": f'{d1["T0"].max():.1f} vs {d0["T0"].max():.1f} °C',
                  "Esito": "✅" if d1["T0"].max() <= d0["T0"].max() else "❌"})
     bal = float(np.abs(D["inj1"] - D["line2"] - D["bess"] - D["link"] - D["curt"]).max())
     rows.append({"Test": "Bilancio di potenza (errore max)", "Atteso": "0", "Ottenuto": f"{bal:.1e} MW", "Esito": "✅" if bal < 1e-9 else "❌"})
     st.table(pd.DataFrame(rows))
 
-# ---------------- tab 4 ----------------
-# CAPACITA' SARDEGNA
-# ---------------------------------------
-with tab4:
+# ---------------- tab 5 ----------------
+with tab5:
     fonti = ["Eolico", "Fotovoltaico", "Termoelettrico", "Idrico", "Accumulo stand-alone"]
     lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
     netta = [1193.20, 1722.09, 2174.92, 463.42, 61.90]
@@ -198,10 +213,8 @@ with tab4:
     st.plotly_chart(f3, width="stretch")
     st.caption("Dati: dashboard Terna (potenza efficiente), come estratti dall'autore.")
 
-# ---------------- tab 5 ----------------
-# CONTESTO
-# ---------------------------------------
-with tab5:
+# ---------------- tab 6 ----------------
+with tab6:
     st.markdown(f"""
     Al tramonto il fotovoltaico si azzera mentre un fronte di vento porta l'eolico a **{wind_peak} MW**. Il termico non può scendere sotto il
     minimo tecnico (**{thermal_min} MW**, servizi di sicurezza). La somma carica la dorsale a 380 kV verso la stazione di Selargius.
