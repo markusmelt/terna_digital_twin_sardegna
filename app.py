@@ -50,9 +50,11 @@ P = m.Params(wind_peak=wind_peak, thermal_nominal=thermal_nominal, thermal_min=t
 D = m.simulate(P)
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
-    ["📊 Simulazione", "🔍 Sensibilità", "📋 Assunzioni", "✅ Verifiche", "⚡ Capacità Sardegna", "🗺️ Contesto"])
+    ["📊 Simulazione", "📋 Assunzioni", "✅ Verifiche", "⚡ Capacità Sardegna", "🗺️ Contesto"])
 
 # ---------------- tab 1 ----------------
+# SIMULAZIONE
+# ---------------------------------------
 with tab1:
     c = st.columns(3)
     r = m.kpi_rows(D)
@@ -90,40 +92,10 @@ with tab1:
     if not link_on:
         st.warning("Senza Link il surplus oltre la soglia va ridotto (curtailment): la rete resta sicura ma si perde energia rinnovabile.")
 
+
 # ---------------- tab 2 ----------------
-with tab2:
-    st.subheader("Quanto Link serve?")
-    st.markdown("Potenza massima che il Link deve esportare (dopo il BESS), al variare di picco eolico e soglia di gestione. "
-                "Il resto dei parametri è quello della barra laterale.")
-
-    @st.cache_data
-    def grid(base: m.Params):
-        winds = np.arange(600, 1201, 100)
-        caps = np.arange(600, 1001, 50)
-        z = np.zeros((len(caps), len(winds)))
-        for i, cp in enumerate(caps):
-            for j, w in enumerate(winds):
-                d = m.dispatch(m.Params(**{**base.__dict__, "wind_peak": float(w), "line_cap": float(cp),
-                                           "link_mw": 5000.0, "link_available": True}))
-                z[i, j] = d["link"].max()
-        return winds, caps, z
-
-    w, cps, z = grid(P)
-    hm = go.Figure(go.Heatmap(x=w, y=cps, z=z, colorscale="YlOrRd", colorbar=dict(title="MW"),
-                              hovertemplate="Eolico %{x} MW<br>Soglia %{y} MW<br>Link %{z:.0f} MW<extra></extra>"))
-    hm.add_contour(x=w, y=cps, z=z, contours=dict(start=m.Params().link_mw, end=m.Params().link_mw, coloring="none"),
-                   line=dict(color="black", width=2), showscale=False, hoverinfo="skip")
-    hm.update_layout(height=420, xaxis_title="Picco eolico (MW)", yaxis_title="Soglia di gestione (MW)",
-                     template="plotly_white", margin=dict(t=20, b=10, l=10, r=10))
-    st.plotly_chart(hm, width="stretch")
-    st.caption("La linea nera indica 1000 MW, capacità nominale di una tratta: oltre quella linea il Link da solo non basta.")
-
-    st.subheader("Efficacia del BESS da solo")
-    bd = m.simulate(m.Params(**{**P.__dict__, "link_available": False, "bess_mw": bess_mw}))
-    st.write(f"Senza Link il BESS assorbe {bd['soc_mwh']:.0f} MWh in 100 minuti, ma restano {bd['curt_mwh']:.0f} MWh da ridurre: "
-             "la potenza dello stand-alone (circa 62 MW) è piccola rispetto al surplus (centinaia di MW).")
-
-# ---------------- tab 3 ----------------
+# ASSUNZIONI
+# ---------------------------------------
 with tab3:
     st.header("Assunzioni e limiti")
     st.subheader("Modello termico: dal bilancio di potenza per unità di lunghezza")
@@ -188,7 +160,9 @@ with tab3:
     - Sviluppi naturali: rete piccola in AC (es. pandapower) con N-1, serie temporali orarie, DLR calibrato, sicurezza antincendio del BESS.
     """)
 
-# ---------------- tab 4 ----------------
+# ---------------- tab 3 ----------------
+# VERIFICHE NUMERICHE
+# ---------------------------------------
 with tab4:
     st.subheader("Verifiche numeriche del modello")
     rows = [{"Test": n, "Atteso": f"{a:.2f}", "Ottenuto": f"{b:.2f}", "Esito": "✅" if abs(a - b) < 0.05 else "❌"}
@@ -201,7 +175,9 @@ with tab4:
     rows.append({"Test": "Bilancio di potenza (errore max)", "Atteso": "0", "Ottenuto": f"{bal:.1e} MW", "Esito": "✅" if bal < 1e-9 else "❌"})
     st.table(pd.DataFrame(rows))
 
-# ---------------- tab 5 ----------------
+# ---------------- tab 4 ----------------
+# CAPACITA' SARDEGNA
+# ---------------------------------------
 with tab5:
     fonti = ["Eolico", "Fotovoltaico", "Termoelettrico", "Idrico", "Accumulo stand-alone"]
     lorda = [1193.52, 1722.09, 2395.47, 467.85, 63.90]
@@ -222,6 +198,8 @@ with tab5:
     st.caption("Dati: dashboard Terna (potenza efficiente), come estratti dall'autore.")
 
 # ---------------- tab 6 ----------------
+# CONTESTO
+# ---------------------------------------
 with tab6:
     st.markdown(f"""
     Al tramonto il fotovoltaico si azzera mentre un fronte di vento porta l'eolico a **{wind_peak} MW**. Il termico non può scendere sotto il
