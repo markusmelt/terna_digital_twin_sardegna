@@ -56,8 +56,6 @@ with tab1:
     c = st.columns(3)
     r = m.kpi_rows(D)
     for col, row in zip(c, r):
-        col.metric(row["Scenario"], f'{row["T max (°C)"]} °C', row["Tempo di intervento"], delta_color="off")
-    st.caption("«Tempo di intervento» = minuti dalla rampa (min 20) al superamento di 85 °C: è la finestra per redispatching.")
     b = st.columns(3)
     b[0].metric("Energia esportata dal Link", f'{D["link_mwh"]:.0f} MWh')
     b[1].metric("Energia assorbita dal BESS", f'{D["soc_mwh"]:.0f} MWh')
