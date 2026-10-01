@@ -14,7 +14,7 @@ URL = "https://dt-overheadconductors.streamlit.app/"
 COL = {"0": "#E30613", "1": "#ff7f0e", "2": "#2ca02c"}
 
 st.title("⚡ Simulatore del transitorio termico – dorsale 380 kV Sardegna")
-st.caption("Rampa eolica serale: quanto tempo c'è per intervenire prima degli 85 °C, e cosa costa ciascuna leva. "
+st.caption("Gradino di energia eolica disponibile al tramonto: il simulatore mostra quanto tempo c'è per intervenire prima degli 85 °C, il ruolo del termico al minimo, dell'intervento BESS e del Tyrrhenian link a regime. "
            "Modello semplificato e dimostrativo: limiti dichiarati nel tab «Assunzioni».")
 st.info("📱 Su mobile apri il menu (☰) in alto a sinistra per i parametri.")
 
@@ -25,13 +25,12 @@ wind_peak = sb.slider("Picco rampa eolica (MW)", 0, 1200, 1000, 50)
 thermal_nominal = sb.slider("Termico iniziale (MW)", 300, 600, 450, 25)
 thermal_min = sb.slider("Minimo tecnico termico (MW)", 100, int(thermal_nominal), min(225, int(thermal_nominal)), 25)
 line_cap = sb.slider("Soglia di gestione della dorsale (MW)", 600, 1100, 800, 10,
-                     help=f"Non è il limite termico: a 1600 A, 380 kV e cos φ 0,9 il limite è ≈ {m.thermal_limit_mw():.0f} MW.")
+                     help=f"Il imite termico a 1600 A, 380 kV e cos φ 0,9 è ≈ {m.thermal_limit_mw():.0f} MW.")
 sb.subheader("Flessibilità")
 bess_mw = sb.slider("BESS stand-alone, potenza (MW)", 0.0, 61.9, 61.9, 5.0)
-bess_h = sb.slider("BESS, durata a potenza nominale (h)", 0.5, 4.0, 2.0, 0.5,
-                   help="Assunzione: il dato Terna riguarda la potenza, non l'energia.")
-link_on = sb.toggle("Tyrrhenian Link disponibile (a regime)", True,
-                    help="Scenario a regime: verifica lo stato di avanzamento dell'opera.")
+bess_h = sb.slider("BESS, durata a potenza nominale (h)", 0.5, 4.0, 2.0, 0.5)
+link_on = sb.toggle("Attivazione Tyrrhenian Link", True,
+                    help="Scenario a regime con entrata in esercizio dell'opera.")
 link_mw = sb.slider("Capacità Link (MW)", 0, 1000, 1000, 50, disabled=not link_on)
 sb.subheader("Ambiente")
 t_amb = sb.slider("Temperatura ambiente (°C)", -5.0, 50.0, 25.0, 1.0)
