@@ -83,7 +83,7 @@ with tab1:
     fig.update_layout(height=820, template="plotly_white", margin=dict(t=50, b=10, l=10, r=10),
                       legend=dict(orientation="h", y=-0.08, x=0.5, xanchor="center"))
     st.plotly_chart(fig, width="stretch")
-    st.dataframe(pd.DataFrame(r).drop(columns=["Minuti sopra 85°C"]), hide_index=True, width="stretch")
+    st.dataframe(pd.DataFrame(r).drop(columns=["Minuti sopra 85 °C"]), hide_index=True, width="stretch")
     if not link_on:
         st.warning("Senza Link il surplus oltre la soglia va ridotto (curtailment): la rete resta sicura ma si perde energia rinnovabile.")
 
