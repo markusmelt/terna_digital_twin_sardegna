@@ -53,9 +53,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
 
 # ---------------- tab 1 ----------------
 with tab1:
-    c = st.columns(3)
-    r = m.kpi_rows(D)
-    for col, row in zip(c, r):
     b = st.columns(3)
     b[0].metric("Energia esportata dal Link", f'{D["link_mwh"]:.0f} MWh')
     b[1].metric("Energia assorbita dal BESS", f'{D["soc_mwh"]:.0f} MWh')
