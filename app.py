@@ -10,7 +10,7 @@ import model as m
 
 st.set_page_config(page_title="Gradino di corrente su un tratto critico di linea e DTR",
                    page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
-URL = "https://dt-overheadconductors.streamlit.app/"
+URL = "https://sardinia-380kv-thermal.streamlit.app/"
 
 st.title("⚡ Gradino di corrente su un tratto critico di dorsale: quanto tempo c'è, e cosa cambia con il DTR")
 st.caption("Modello termico semplificato (primo ordine, un solo tratto critico, un solo limite di temperatura). "
