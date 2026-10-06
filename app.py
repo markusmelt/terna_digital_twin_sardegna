@@ -10,7 +10,7 @@ import model as m
 
 st.set_page_config(page_title="Simulatore transitorio termico dorsale 380 kV",
                    page_icon="⚡", layout="wide", initial_sidebar_state="collapsed")
-URL = "https://dt-overheadconductors.streamlit.app/"
+URL = "https://sardinia-380kv-thermal.streamlit.app/"
 COL = {"0": "#E30613", "1": "#ff7f0e", "2": "#2ca02c"}
 
 st.title("⚡ Simulatore del transitorio termico – dorsale 380 kV Sardegna")
