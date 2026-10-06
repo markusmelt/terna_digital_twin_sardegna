@@ -1,58 +1,44 @@
-"""Modello del transitorio termico di una dorsale 380 kV (PoC dimostrativo).
+"""Modello termico di un tratto critico di linea aerea (PoC dimostrativo), in termini di corrente.
 
 Partenza (W/m, forma IEEE 738):  q_c + q_r + m*Cp*dT/dt = q_s + I^2 R(T)
 Semplificazioni: q_s = 0 (notte); q_c + q_r ~ h_eff * (T - T_a) (linearizzazione);
-R costante; il vento aumenta lo scambio secondo f(V) = (max(V, V0) / V0)^0.5, con h_eff = f * h_ref.
-Risultato: tau dT/dt + T = T_a + I^2 R / h_eff, con tau = C / h_eff.
-Calibrazione su un punto: 85 °C a 1600 A, 25 °C, V = V0 = 0,6 m/s (f = 1)  ->  DT_MAX = 60 °C. Quindi:
-    T_target = T_amb + (I/I_MAX)^2 * DT_MAX / f(V),   tau = TAU / f(V).
-Integrazione esatta per passo (target costante nel minuto), non Eulero.
+R(T) lineare con alfa = 0,4 %/°C attorno a 85 °C; il vento aumenta lo scambio secondo f(V) = (max(V, V0) / V0)^0.5, con h_eff = f * h_ref.
+Con u = (I/I_MAX)^2 * DT_MAX / f(V):   (TAU/f) dT/dt = u * (1 + ALPHA (T - 85)) - (T - T_a)
+cioe' un'equazione lineare in T con  T* = [u (1 - 85 ALPHA) + T_a] / (1 - u ALPHA)  e  tau_eff = (TAU/f) / (1 - u ALPHA).
+Calibrazione su un punto: 85 °C a 1600 A, 25 °C, V = V0 = 0,6 m/s (f = 1)  ->  DT_MAX = 60 °C.
+Integrazione esatta per passo (T* e tau_eff costanti nel minuto). Se u ALPHA >= 1 (runaway) si satura a T_RUNAWAY.
 """
-from dataclasses import dataclass
 import numpy as np
 
-V_LINE = 380e3      # V concatenata
-COS_PHI = 0.9
 I_MAX = 1600.0      # A, corrente di calibrazione
 T_LIMIT = 85.0      # °C, limite di sicurezza
-DT_MAX = 60.0       # °C a I_MAX con T_amb = 25 °C, senza vento (85 - 25)
-TAU = 20.0          # min, costante di tempo senza vento
+DT_MAX = 60.0       # °C a I_MAX con T_amb = 25 °C, V = V0 (85 - 25)
+TAU = 20.0          # min, costante di tempo con V = V0
 V0_WIND, N_WIND = 0.6, 0.5   # m/s di calibrazione; esponente (ordine di grandezza)
-RAMP_MIN = 20       # minuto della rampa eolica
-N_MIN = 121
-
-
-@dataclass(frozen=True)
-class Params:
-    wind_peak: float = 1000.0
-    thermal_nominal: float = 450.0
-    thermal_min: float = 225.0
-    line_cap: float = 800.0        # soglia di gestione, non limite termico
-    bess_mw: float = 61.9
-    bess_mwh: float = 123.8        # ASSUNZIONE: 2 h alla potenza nominale
-    link_mw: float = 1000.0
-    link_available: bool = True
-    t_amb: float = 25.0
-    wind_ms: float = 0.6           # vento sul conduttore (m/s); 0,6 = condizione convenzionale
-
-
-def current_a(p_mw):
-    return np.asarray(p_mw) * 1e6 / (np.sqrt(3) * V_LINE * COS_PHI)
-
-
-def thermal_limit_mw():
-    """Potenza trifase alla corrente di calibrazione (~948 MW)."""
-    return float(np.sqrt(3) * V_LINE * I_MAX * COS_PHI / 1e6)
+ALPHA = 0.004       # 1/°C, coefficiente di temperatura della resistenza (alluminio, ordine di grandezza)
+T_RUNAWAY = 300.0   # °C, saturazione numerica se u*ALPHA >= 1 (valore non fisico)
 
 
 def wind_factor(v_ms):
     return (max(float(v_ms), V0_WIND) / V0_WIND) ** N_WIND
 
 
-def temperature(p_mw, t_amb, f=1.0):
-    i = current_a(p_mw)
-    target = t_amb + (i / I_MAX) ** 2 * DT_MAX / f
-    tau = np.full(len(i), TAU / f)
+def _target_tau(i, t_amb, f):
+    """T* e tau_eff per R(T) lineare (equazione lineare in T). Se u*ALPHA >= 1: runaway, saturazione."""
+    i = np.atleast_1d(np.asarray(i, dtype=float))
+    u = (i / I_MAX) ** 2 * DT_MAX / f
+    k = 1.0 - u * ALPHA
+    ok = k > 0.02
+    ks = np.where(ok, k, 1.0)
+    target = np.where(ok, (u * (1.0 - T_LIMIT * ALPHA) + t_amb) / ks, T_RUNAWAY)
+    tau = np.where(ok, (TAU / f) / ks, TAU / f)
+    return target, tau
+
+
+def temperature(i_a, t_amb, f=1.0):
+    """Temperatura (°C, passo 1 min) per un profilo di corrente; parte dal regime alla prima corrente."""
+    i = np.asarray(i_a, dtype=float)
+    target, tau = _target_tau(i, t_amb, f)
     out = np.empty(len(i))
     out[0] = target[0]
     for j in range(len(i) - 1):
@@ -60,56 +46,59 @@ def temperature(p_mw, t_amb, f=1.0):
     return out
 
 
-def dispatch(p: Params):
-    """Profili di potenza e azioni di flessibilita' (passo 1 min)."""
-    t = np.arange(N_MIN)
-    rng = np.random.default_rng(42)
-    wind = np.clip(np.where(t < RAMP_MIN, 100, p.wind_peak) + rng.normal(0, 10, t.size), 0, None)
-    solar = np.clip(100 - 1.2 * t + rng.normal(0, 2, t.size), 0, None)
-    inj0 = wind + solar + p.thermal_nominal
-    inj1 = wind + solar + np.where(t < RAMP_MIN, p.thermal_nominal, p.thermal_min)
-    bess, link, curt = (np.zeros(t.size) for _ in range(3))
-    soc = 0.0  # MWh assorbiti
-    link_cap = p.link_mw if p.link_available else 0.0
-    for k in range(RAMP_MIN, t.size):
-        exc = max(inj1[k] - p.line_cap, 0.0)
-        b = min(p.bess_mw, exc, max(p.bess_mwh - soc, 0.0) * 60)
-        soc += b / 60
-        bess[k] = b
-        exc -= b
-        link[k] = min(exc, link_cap)
-        curt[k] = exc - link[k]
-    return dict(t=t, wind=wind, solar=solar, inj0=inj0, inj1=inj1, bess=bess, link=link, curt=curt,
-                line2=inj1 - bess - link - curt, soc_mwh=float(bess.sum() / 60),
-                curt_mwh=float(curt.sum() / 60), link_mwh=float(link.sum() / 60))
+def rating_a(t_amb, f=1.0):
+    """Corrente a regime che porta il conduttore a T_LIMIT: a 85 °C vale u = T_LIMIT - T_a, quindi I = I_MAX sqrt(f (T_LIMIT - T_a) / DT_MAX)."""
+    return I_MAX * float(np.sqrt(max(f * (T_LIMIT - t_amb), 0.0) / DT_MAX))
 
 
-def simulate(p: Params):
-    d = dispatch(p)
-    args = dict(t_amb=p.t_amb, f=wind_factor(p.wind_ms))
-    d["T0"] = temperature(d["inj0"], **args)
-    d["T1"] = temperature(d["inj1"], **args)
-    d["T2"] = temperature(d["line2"], **args)
-    return d
+def step_response(i0, i1, t_amb, f=1.0, t_step=10, n=121):
+    """Corrente e temperatura per I = i0 prima di t_step, i1 dopo. Parte dal regime a i0."""
+    t = np.arange(n)
+    i = np.where(t < t_step, float(i0), float(i1))
+    return t, i, temperature(i, t_amb, f)
 
 
-def kpi_rows(d):
-    rows = []
-    for name, T in (("Termico rigido", d["T0"]), ("Termico al minimo", d["T1"]), ("BESS + Link", d["T2"])):
-        post = T[RAMP_MIN:] > T_LIMIT
-        rows.append({"Scenario": name, "T max (°C)": f"{T.max():.1f}",
-                     "Tempo di intervento": f"{int(np.argmax(post))} min" if post.any() else "nessun superamento",
-                     "Minuti sopra 85 °C": int((T > T_LIMIT).sum())})
-    return rows
+def time_to_limit(i0, i1, t_amb, f=1.0):
+    """Minuti dal gradino al superamento di T_LIMIT (forma chiusa). None se non viene raggiunto; 0 se gia' sopra."""
+    tt0, _ = _target_tau(i0, t_amb, f)
+    tt1, tau1 = _target_tau(i1, t_amb, f)
+    t0, t1, tau = float(tt0[0]), float(tt1[0]), float(tau1[0])
+    if t0 >= T_LIMIT:
+        return 0.0
+    if t1 <= T_LIMIT:
+        return None
+    return float(-tau * np.log((T_LIMIT - t1) / (t0 - t1)))
+
+
+def rating_30min_a(i0, t_amb, f=1.0, minutes=30.0):
+    """Corrente massima di un gradino che porta a T_LIMIT dopo esattamente 'minutes' minuti, partendo dal regime a i0 (bisezione)."""
+    lo, hi = float(i0), 4.0 * I_MAX
+    ts = time_to_limit(i0, hi, t_amb, f)
+    if ts is not None and ts > minutes:
+        return hi
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        ts = time_to_limit(i0, mid, t_amb, f)
+        if ts is None or ts > minutes:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
 
 
 def self_checks():
     """Verifiche numeriche mostrate nell'app."""
     n = 60
-    ss = temperature(np.full(n, thermal_limit_mw()), 25.0)[-1]
-    p0, p1 = 0.5 * thermal_limit_mw(), 1.2 * thermal_limit_mw()
-    step = temperature(np.r_[np.full(10, p0), np.full(n, p1)], 25.0)
-    t0, t1 = [25 + (current_a(x) / I_MAX) ** 2 * DT_MAX for x in (p0, p1)]
-    exact = t1 + (t0 - t1) * np.exp(-20.0 / TAU)
+    ss = temperature(np.full(n, I_MAX), 25.0)[-1]
+    i0, i1 = 0.5 * I_MAX, 1.2 * I_MAX
+    step = temperature(np.r_[np.full(10, i0), np.full(n, i1)], 25.0)
+    (t0, _), (t1, tau1) = _target_tau(i0, 25.0, 1.0), _target_tau(i1, 25.0, 1.0)
+    exact = float(t1[0] + (t0[0] - t1[0]) * np.exp(-20.0 / tau1[0]))
+    # ODE integrata numericamente (Eulero a passo piccolo) come controllo indipendente della soluzione esatta
+    T, dt = float(t0[0]), 0.001
+    u = (i1 / I_MAX) ** 2 * DT_MAX
+    for _ in range(int(20.0 / dt)):
+        T += dt * (u * (1 + ALPHA * (T - T_LIMIT)) - (T - 25.0)) / TAU
     return [("Regime a I_MAX (atteso 85,0 °C)", 85.0, float(ss)),
-            ("Risposta a gradino dopo 20 min", float(exact), float(step[10 + 20 - 1 + 1]))]
+            ("Risposta a gradino dopo 20 min (esatta)", exact, float(step[10 + 20 - 1 + 1])),
+            ("Gradino: soluzione esatta vs Eulero fine", exact, T)]
