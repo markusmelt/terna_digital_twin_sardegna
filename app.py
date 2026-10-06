@@ -6,7 +6,7 @@ import streamlit as st
 import model as m
 
 st.set_page_config(page_title="Calcolatore di margine di una linea 380 kV (DTR)", page_icon="⚡", layout="centered")
-URL = "https://dt-overheadconductors.streamlit.app/"
+URL = "https://sardinia-380kv-thermal.streamlit.app/"
 
 st.title("⚡ Calcolatore di margine di una linea 380 kV")
 st.caption("Quanta corrente in più regge un conduttore, con vento e temperatura reali, rispetto al limite fisso (DTR). "
